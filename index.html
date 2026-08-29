@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>SAM Pet — Phiếu xuất hàng</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/sam-pet-git-page/manifest.json" />
+  <meta name="theme-color" content="#0f2f2a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SAM Pet" />
+  <link rel="apple-touch-icon" href="/sam-pet-git-page/icons/apple-touch-icon.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -1424,6 +1433,12 @@
     renderPhieu();
     loadProducts();
     loadSheetHistory();
+
+    // Đăng ký Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sam-pet-git-page/sw.js")
+        .catch((err) => console.warn("SW registration failed:", err));
+    }
   </script>
 </body>
 </html>
