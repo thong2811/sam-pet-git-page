@@ -1,9 +1,9 @@
 {
-  "name": "SAM Pet — Phiếu xuất hàng",
-  "short_name": "SAM Pet",
+  "name": "SamPet — Phiếu xuất hàng",
+  "short_name": "SamPet",
   "description": "Lập phiếu xuất hàng hàng ngày cho cửa hàng SAM Pet",
-  "start_url": "/sam-pet-git-page/",
-  "scope": "/sam-pet-git-page/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f2f2a",

@@ -1,11 +1,11 @@
 const CACHE_NAME = "sam-pet-v1";
 const ASSETS = [
-  "/sam-pet-git-page/",
-  "/sam-pet-git-page/index.html",
-  "/sam-pet-git-page/manifest.json",
-  "/sam-pet-git-page/icons/icon-192.png",
-  "/sam-pet-git-page/icons/icon-512.png",
-  "/sam-pet-git-page/product.csv"
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./product.csv"
 ];
 
 // Cài đặt: cache các file tĩnh

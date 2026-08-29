@@ -6,13 +6,13 @@
   <title>SAM Pet — Phiếu xuất hàng</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="/sam-pet-git-page/manifest.json" />
+  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0f2f2a" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SAM Pet" />
-  <link rel="apple-touch-icon" href="/sam-pet-git-page/icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -61,7 +61,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div class="flex items-center gap-3">
         <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl shadow-lift overflow-hidden">
-          <img src="/sam-pet-git-page/icons/apple-touch-icon.png" alt="SAM Pet logo" class="h-11 w-11 object-cover" />
+          <img src="icons/apple-touch-icon.png" alt="SAM Pet logo" class="h-11 w-11 object-cover" />
         </span>
         <div>
           <p class="text-xs uppercase tracking-[0.18em] text-pine-100/80">Sam pet</p>
@@ -1434,7 +1434,7 @@
 
     // Đăng ký Service Worker
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sam-pet-git-page/sw.js")
+      navigator.serviceWorker.register("sw.js")
         .catch((err) => console.warn("SW registration failed:", err));
     }
   </script>
