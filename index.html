@@ -230,7 +230,6 @@
               <th class="px-4 py-3 font-semibold">Tên SP</th>
               <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
               <th class="px-4 py-3 font-semibold">Giá bán</th>
-              <th class="px-4 py-3 font-semibold">Giá nhập</th>
               <th class="px-4 py-3 font-semibold">Ghi chú</th>
               <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
             </tr>
@@ -263,8 +262,6 @@
               <th class="px-4 py-3 font-semibold text-right">Số dòng</th>
               <th class="px-4 py-3 font-semibold text-right">Tổng SL</th>
               <th class="px-4 py-3 font-semibold text-right">Tổng tiền bán</th>
-              <th class="px-4 py-3 font-semibold text-right">Tổng tiền nhập</th>
-              <th class="px-4 py-3 font-semibold text-right">Lợi nhuận</th>
               <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
             </tr>
           </thead>
@@ -956,15 +953,11 @@
       // Desktop table
       $("stats-body").innerHTML = dates.map((date) => {
         const g = byDate[date];
-        const profit = g.selling - g.purchase;
-        const profitColor = profit >= 0 ? "text-emerald-700" : "text-red-600";
         return `<tr class="hover:bg-pine-50">
           <td class="px-4 py-2.5 font-medium whitespace-nowrap">${escapeHtml(date)}</td>
           <td class="px-4 py-2.5 text-right text-slate-600">${g.rows}</td>
           <td class="px-4 py-2.5 text-right text-slate-600">${g.qty.toLocaleString("vi-VN")}</td>
           <td class="px-4 py-2.5 text-right font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")}</td>
-          <td class="px-4 py-2.5 text-right text-slate-600">${g.purchase.toLocaleString("vi-VN")}</td>
-          <td class="px-4 py-2.5 text-right font-semibold ${profitColor}">${profit.toLocaleString("vi-VN")}</td>
           <td class="px-4 py-2.5 text-right">
             <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
               class="rounded-lg px-3 py-1 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
@@ -977,16 +970,12 @@
       // Mobile cards
       $("stats-cards").innerHTML = dates.map((date) => {
         const g = byDate[date];
-        const profit = g.selling - g.purchase;
-        const profitColor = profit >= 0 ? "text-emerald-700" : "text-red-600";
         return `<div class="px-4 py-3 flex items-center justify-between gap-3">
           <div>
             <p class="font-medium text-sm">${escapeHtml(date)}</p>
             <p class="text-xs text-slate-500 mt-0.5">${g.rows} dòng · SL ${g.qty.toLocaleString("vi-VN")}</p>
             <p class="text-xs mt-0.5">
               <span class="font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")} đ</span>
-              <span class="text-slate-400 mx-1">·</span>
-              <span class="${profitColor}">LN ${profit.toLocaleString("vi-VN")}</span>
             </p>
           </div>
           <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
@@ -1062,7 +1051,6 @@
             <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName || "")}</td>
             <td class="px-4 py-2.5 text-right font-medium">${escapeHtml(String(row.quantity || ""))}</td>
             <td class="px-4 py-2.5 text-right whitespace-nowrap">${row.sellingPrice ? Number(row.sellingPrice).toLocaleString("vi-VN") : "—"}</td>
-            <td class="px-4 py-2.5 text-right whitespace-nowrap">${row.purchasePrice ? Number(row.purchasePrice).toLocaleString("vi-VN") : "—"}</td>
             <td class="px-4 py-2.5 text-slate-500 max-w-[12rem] truncate">${escapeHtml(row.note || "—")}</td>
             <td class="px-4 py-2.5 text-right whitespace-nowrap">
               <button type="button" data-action="editrow" data-rowid="${escapeHtml(row.id)}"
@@ -1426,6 +1414,7 @@
         $("history-summary").closest("section").scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
+    $("btn-edit-cancel").addEventListener("click", closeEditModal);
     $("btn-edit-save").addEventListener("click", saveEditModal);
     $("edit-modal").addEventListener("click", (e) => {
       if (e.target === $("edit-modal")) closeEditModal();
