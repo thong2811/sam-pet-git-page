@@ -1513,40 +1513,45 @@
     if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone) {
       let startY = 0;
       let pulling = false;
+      let isReloading = false;
       const THRESHOLD = 80;
       const ptr = document.getElementById("ptr-indicator");
       const ptrText = document.getElementById("ptr-text");
       const ptrIcon = document.getElementById("ptr-icon");
 
       document.addEventListener("touchstart", (e) => {
-        if (window.scrollY === 0) {
+        if (window.scrollY === 0 && !isReloading) {
           startY = e.touches[0].clientY;
           pulling = true;
         }
       }, { passive: true });
 
       document.addEventListener("touchmove", (e) => {
-        if (!pulling) return;
+        if (!pulling || isReloading) return;
         const dist = e.touches[0].clientY - startY;
         if (dist > 10) {
           ptr.classList.add("ptr-ready");
           ptrText.textContent = dist >= THRESHOLD ? "Thả để tải lại" : "Kéo xuống để tải lại";
+        } else {
+          ptr.classList.remove("ptr-ready");
         }
       }, { passive: true });
 
       document.addEventListener("touchend", (e) => {
-        if (!pulling) return;
+        if (!pulling || isReloading) return;
         pulling = false;
+        ptr.classList.remove("ptr-ready");
         const dist = e.changedTouches[0].clientY - startY;
         if (dist >= THRESHOLD) {
-          // Hiện splash loading trước khi reload
-          const splash = $("splash");
-          splash.classList.remove("hidden");
-          document.getElementById("ptr-indicator").classList.remove("ptr-ready");
+          isReloading = true;
+          $("splash").classList.remove("hidden");
           setTimeout(() => window.location.reload(), 400);
-        } else {
-          ptr.classList.remove("ptr-ready");
         }
+      }, { passive: true });
+
+      document.addEventListener("touchcancel", () => {
+        pulling = false;
+        ptr.classList.remove("ptr-ready");
       }, { passive: true });
     }
   </script>
