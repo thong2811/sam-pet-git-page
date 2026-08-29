@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>SAM Pet — Phiếu xuất hàng</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -243,6 +243,36 @@
       <div id="history-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
         Chưa có dữ liệu xuất hàng.
       </div>
+    </section>
+
+    <!-- Thống kê theo ngày -->
+    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-pine-800">Thống kê theo ngày</h2>
+          <p id="stats-summary" class="text-xs text-slate-500 mt-0.5">Tải dữ liệu từ Google Sheets để xem thống kê.</p>
+        </div>
+      </div>
+      <div id="stats-empty" class="hidden px-5 py-8 text-center text-sm text-slate-400">Chưa có dữ liệu.</div>
+      <!-- Desktop table -->
+      <div class="overflow-x-auto scroll-thin hidden sm:block">
+        <table class="min-w-full text-sm">
+          <thead class="bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Ngày xuất</th>
+              <th class="px-4 py-3 font-semibold text-right">Số dòng</th>
+              <th class="px-4 py-3 font-semibold text-right">Tổng SL</th>
+              <th class="px-4 py-3 font-semibold text-right">Tổng tiền bán</th>
+              <th class="px-4 py-3 font-semibold text-right">Tổng tiền nhập</th>
+              <th class="px-4 py-3 font-semibold text-right">Lợi nhuận</th>
+              <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="stats-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <!-- Mobile cards -->
+      <div id="stats-cards" class="sm:hidden divide-y divide-slate-100"></div>
     </section>
 
     <!-- Modal sửa dòng -->
@@ -654,24 +684,13 @@
       const giaBan = toNumber(getField(product, "giaBan"), 0);
       const giaNhap= toNumber(getField(product, "giaNhap"), 0);
 
-      // Nếu đã có trong phiếu → tăng số lượng thêm 1
-      const existing = state.phieu.find((r) => r.productId === maSP);
-      if (existing) {
-        existing.quantity += 1;
-        existing.updatedAt = unixNow();
-        renderPhieu();
-        renderProducts(); // cập nhật highlight
-        toast(`${tenSP} → SL ${existing.quantity}`, "info");
-        return;
-      }
-
       const now = unixNow();
       state.phieu.push({
         id: genLineId(),
         productId: maSP,
         productName: tenSP,
         donVi: donVi || "",
-        date: todayInputValue(),   // YYYY-MM-DD, mặc định hôm nay
+        date: $("ngay-xuat").value || todayInputValue(),
         quantity: 1,
         sellingPrice: giaBan,
         purchasePrice: giaNhap,
@@ -680,7 +699,7 @@
         updatedAt: now
       });
       renderPhieu();
-      renderProducts(); // cập nhật highlight
+      renderProducts();
       toast(`Đã thêm ${tenSP}`, "success");
     }
 
@@ -902,6 +921,82 @@
       }
     }
 
+    /* ========== Thống kê theo ngày ========== */
+    function renderStats() {
+      if (!sheetHistory.length) {
+        $("stats-empty").classList.remove("hidden");
+        $("stats-body").innerHTML = "";
+        $("stats-cards").innerHTML = "";
+        $("stats-summary").textContent = "Chưa có dữ liệu.";
+        return;
+      }
+      $("stats-empty").classList.add("hidden");
+
+      // Gom nhóm theo ngày
+      const byDate = {};
+      sheetHistory.forEach((row) => {
+        const d = row.date || "—";
+        if (!byDate[d]) byDate[d] = { rows: 0, qty: 0, selling: 0, purchase: 0 };
+        byDate[d].rows     += 1;
+        byDate[d].qty      += Number(row.quantity    || 0);
+        byDate[d].selling  += Number(row.sellingPrice  || 0) * Number(row.quantity || 0);
+        byDate[d].purchase += Number(row.purchasePrice || 0) * Number(row.quantity || 0);
+      });
+
+      // Sắp xếp ngày mới nhất lên trên (DD-MM-YYYY → so sánh đảo ngược)
+      const dates = Object.keys(byDate).sort((a, b) => {
+        const toYMD = (s) => { const p = s.split("-"); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s; };
+        return toYMD(b).localeCompare(toYMD(a));
+      });
+
+      const totalSelling = dates.reduce((s, d) => s + byDate[d].selling, 0);
+      $("stats-summary").textContent =
+        `${dates.length} ngày · Tổng doanh thu: ${totalSelling.toLocaleString("vi-VN")} đ`;
+
+      // Desktop table
+      $("stats-body").innerHTML = dates.map((date) => {
+        const g = byDate[date];
+        const profit = g.selling - g.purchase;
+        const profitColor = profit >= 0 ? "text-emerald-700" : "text-red-600";
+        return `<tr class="hover:bg-pine-50">
+          <td class="px-4 py-2.5 font-medium whitespace-nowrap">${escapeHtml(date)}</td>
+          <td class="px-4 py-2.5 text-right text-slate-600">${g.rows}</td>
+          <td class="px-4 py-2.5 text-right text-slate-600">${g.qty.toLocaleString("vi-VN")}</td>
+          <td class="px-4 py-2.5 text-right font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")}</td>
+          <td class="px-4 py-2.5 text-right text-slate-600">${g.purchase.toLocaleString("vi-VN")}</td>
+          <td class="px-4 py-2.5 text-right font-semibold ${profitColor}">${profit.toLocaleString("vi-VN")}</td>
+          <td class="px-4 py-2.5 text-right">
+            <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
+              class="rounded-lg px-3 py-1 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
+              Xem
+            </button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      // Mobile cards
+      $("stats-cards").innerHTML = dates.map((date) => {
+        const g = byDate[date];
+        const profit = g.selling - g.purchase;
+        const profitColor = profit >= 0 ? "text-emerald-700" : "text-red-600";
+        return `<div class="px-4 py-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium text-sm">${escapeHtml(date)}</p>
+            <p class="text-xs text-slate-500 mt-0.5">${g.rows} dòng · SL ${g.qty.toLocaleString("vi-VN")}</p>
+            <p class="text-xs mt-0.5">
+              <span class="font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")} đ</span>
+              <span class="text-slate-400 mx-1">·</span>
+              <span class="${profitColor}">LN ${profit.toLocaleString("vi-VN")}</span>
+            </p>
+          </div>
+          <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
+            class="shrink-0 rounded-lg px-3 py-1.5 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
+            Xem
+          </button>
+        </div>`;
+      }).join("");
+    }
+
     /* ========== Quản lý xuất hàng (Google Sheets) ========== */
     var sheetHistory = [];       // toàn bộ dữ liệu từ Sheet
     var historySelected = new Set(); // ids đang được chọn
@@ -1033,6 +1128,7 @@
         }).reverse();
         historySelected.clear();
         renderHistory();
+        renderStats();
       } catch (err) {
         $("history-error").textContent = "Không tải được dữ liệu: " + err.message;
         $("history-error").classList.remove("hidden");
@@ -1061,6 +1157,7 @@
         sheetHistory = sheetHistory.filter((r) => !historySelected.has(r.id));
         historySelected.clear();
         renderHistory();
+        renderStats();
       } catch (err) {
         toast("Lỗi khi xóa: " + err.message, "error");
       } finally {
@@ -1313,8 +1410,22 @@
       if (btn) openEditModal(btn.getAttribute("data-rowid"));
     });
 
-    // Modal sửa
-    $("btn-edit-cancel").addEventListener("click", closeEditModal);
+    // Thống kê: nút Xem ngày
+    ["stats-body", "stats-cards"].forEach((id) => {
+      $(id).addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action='filter-date']");
+        if (!btn) return;
+        const date = btn.getAttribute("data-date"); // DD-MM-YYYY
+        // Chuyển DD-MM-YYYY → YYYY-MM-DD cho input[type=date]
+        const parts = date.split("-");
+        if (parts.length === 3) {
+          $("history-filter-date").value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        renderHistory();
+        // Scroll xuống section quản lý
+        $("history-summary").closest("section").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
     $("btn-edit-save").addEventListener("click", saveEditModal);
     $("edit-modal").addEventListener("click", (e) => {
       if (e.target === $("edit-modal")) closeEditModal();
