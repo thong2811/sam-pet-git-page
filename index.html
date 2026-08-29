@@ -74,73 +74,6 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-    <!-- Thông tin phiếu + form nhập -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="lg:col-span-1 bg-white rounded-2xl shadow-card p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-pine-700 mb-3">Thông tin phiếu</h2>
-        <label class="block text-sm text-slate-600 mb-1" for="ngay-xuat">Ngày xuất</label>
-        <input id="ngay-xuat" type="date"
-          class="w-full rounded-xl border border-slate-200 bg-paper/60 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-        <p class="mt-3 text-xs text-slate-500">Ngày này ghi vào cột <code>date</code> của mọi dòng khi xuất CSV (định dạng DD-MM-YYYY).</p>
-      </div>
-
-      <div class="lg:col-span-2 bg-white rounded-2xl shadow-card p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-pine-700 mb-3">Nhập thông tin xuất hàng</h2>
-        <div id="selected-empty" class="rounded-xl border border-dashed border-slate-300 bg-paper/50 px-4 py-6 text-center text-sm text-slate-500">
-          Chọn một sản phẩm ở bảng bên dưới để thêm vào phiếu xuất.
-        </div>
-        <form id="form-xuat" class="hidden space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs text-slate-500 mb-1">Mã SP</label>
-              <input id="form-masp" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm" />
-            </div>
-            <div class="sm:col-span-2">
-              <label class="block text-xs text-slate-500 mb-1">Tên SP</label>
-              <input id="form-tensp" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm" />
-            </div>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <label class="block text-xs text-slate-500 mb-1">Đơn vị</label>
-              <input id="form-donvi" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs text-slate-500 mb-1" for="form-soluong">Số lượng <span class="text-clay-600">*</span></label>
-              <input id="form-soluong" type="number" min="1" step="1" value="1" required
-                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-            </div>
-            <div>
-              <label class="block text-xs text-slate-500 mb-1" for="form-giaban">Giá bán</label>
-              <input id="form-giaban" type="number" min="0" step="1" value="0"
-                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-            </div>
-            <div>
-              <label class="block text-xs text-slate-500 mb-1" for="form-gianhap">Giá nhập</label>
-              <input id="form-gianhap" type="number" min="0" step="1" value="0"
-                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1" for="form-ghichu">Ghi chú</label>
-            <input id="form-ghichu" type="text" maxlength="200" placeholder="Không bắt buộc"
-              class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button type="submit"
-              class="inline-flex items-center justify-center gap-2 rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-4 py-2.5 text-sm font-medium shadow-card">
-              Thêm vào phiếu
-            </button>
-            <button type="button" id="btn-bo-chon"
-              class="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm hover:bg-slate-50">
-              Bỏ chọn
-            </button>
-            <p class="text-xs text-slate-500">Giá bán / giá nhập lấy từ sản phẩm, có thể sửa trước khi thêm.</p>
-          </div>
-        </form>
-      </div>
-    </section>
-
     <!-- Danh sách sản phẩm -->
     <section class="bg-white rounded-2xl shadow-card overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -166,6 +99,9 @@
       <div id="product-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
         Không tìm thấy sản phẩm phù hợp.
       </div>
+      <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">
+        Double-click vào dòng để thêm vào phiếu xuất.
+      </div>
     </section>
 
     <!-- Danh sách phiếu xuất -->
@@ -175,13 +111,27 @@
           <h2 class="text-base font-semibold text-pine-800">Danh sách phiếu xuất</h2>
           <p id="phieu-summary" class="text-xs text-slate-500 mt-0.5">Chưa có sản phẩm nào trong phiếu.</p>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2 items-center">
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-500 whitespace-nowrap">Ngày xuất:</label>
+            <input id="ngay-xuat" type="date"
+              class="rounded-xl border border-slate-200 bg-paper/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <button id="btn-apply-date" type="button"
+              class="rounded-xl border border-slate-200 px-3 py-2 text-xs hover:bg-slate-50 whitespace-nowrap">
+              Áp dụng tất cả
+            </button>
+          </div>
           <button id="btn-xoa-phieu" type="button"
-            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+            class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-40"
             disabled>Xóa phiếu</button>
-          <button id="btn-xuat-csv" type="button"
-            class="rounded-xl bg-clay-500 hover:bg-clay-600 text-white px-4 py-2.5 text-sm font-medium shadow-card disabled:opacity-40"
-            disabled>Xuất file CSV</button>
+          <button id="btn-xuat-sheets" type="button"
+            class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-sm font-medium shadow-card disabled:opacity-40 inline-flex items-center gap-2"
+            disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+            Xuất lên Google Sheets
+          </button>
         </div>
       </div>
       <div class="overflow-x-auto scroll-thin">
@@ -192,9 +142,9 @@
               <th class="px-4 py-3 font-semibold">Mã SP</th>
               <th class="px-4 py-3 font-semibold">Tên SP</th>
               <th class="px-4 py-3 font-semibold">Đơn vị</th>
+              <th class="px-4 py-3 font-semibold">Ngày xuất</th>
               <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
               <th class="px-4 py-3 font-semibold">Giá bán</th>
-              <th class="px-4 py-3 font-semibold">Giá nhập</th>
               <th class="px-4 py-3 font-semibold">Ghi chú</th>
               <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
             </tr>
@@ -203,9 +153,141 @@
         </table>
       </div>
       <div id="phieu-empty" class="px-5 py-10 text-center text-sm text-slate-500">
-        Phiếu xuất đang trống. Chọn sản phẩm và nhấn <span class="font-medium text-pine-700">Thêm vào phiếu</span>.
+        Phiếu xuất đang trống. Double-click vào sản phẩm để thêm vào phiếu.
       </div>
     </section>
+
+    <!-- Quản lý xuất hàng (Google Sheets) -->
+    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+      <!-- Toolbar trên -->
+      <div class="px-5 py-4 border-b border-slate-100 flex flex-col gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div class="flex-1">
+            <h2 class="text-base font-semibold text-pine-800 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pine-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              Quản lý xuất hàng (Google Sheets)
+            </h2>
+            <p id="history-summary" class="text-xs text-slate-500 mt-0.5">Đang tải dữ liệu…</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btn-reload-history" type="button"
+              class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Tải lại
+            </button>
+          </div>
+        </div>
+        <!-- Bộ lọc + actions -->
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="history-search" type="search" placeholder="Tìm theo tên, mã SP, ghi chú…"
+            class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 w-full sm:w-56" />
+          <input id="history-filter-date" type="date"
+            class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          <button id="btn-history-clear-date" type="button"
+            class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 text-slate-500">
+            Xóa lọc ngày
+          </button>
+          <div class="flex-1"></div>
+          <!-- Xuất CSV từ Sheets -->
+          <button id="btn-export-sheets-csv" type="button"
+            class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+            disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Xuất CSV
+          </button>
+          <!-- Xóa đã chọn -->
+          <button id="btn-history-delete" type="button"
+            class="rounded-xl bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+            disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Xóa đã chọn (<span id="history-selected-count">0</span>)
+          </button>
+        </div>
+      </div>
+      <div id="history-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
+      <div class="overflow-x-auto scroll-thin max-h-[36rem]">
+        <table class="min-w-full text-sm">
+          <thead class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
+            <tr>
+              <th class="px-3 py-3">
+                <input type="checkbox" id="history-check-all" class="rounded" />
+              </th>
+              <th class="px-4 py-3 font-semibold">#</th>
+              <th class="px-4 py-3 font-semibold">Ngày xuất</th>
+              <th class="px-4 py-3 font-semibold">Mã SP</th>
+              <th class="px-4 py-3 font-semibold">Tên SP</th>
+              <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
+              <th class="px-4 py-3 font-semibold">Giá bán</th>
+              <th class="px-4 py-3 font-semibold">Giá nhập</th>
+              <th class="px-4 py-3 font-semibold">Ghi chú</th>
+              <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div id="history-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
+        Chưa có dữ liệu xuất hàng.
+      </div>
+    </section>
+
+    <!-- Modal sửa dòng -->
+    <div id="edit-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+      <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 space-y-4">
+        <h3 class="text-base font-semibold text-pine-800">Cập nhật thông tin xuất hàng</h3>
+        <input type="hidden" id="edit-id" />
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Mã SP</label>
+            <input id="edit-productid" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Ngày xuất</label>
+            <input id="edit-date" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">Tên SP</label>
+          <input id="edit-productname" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm" />
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Số lượng <span class="text-clay-600">*</span></label>
+            <input id="edit-quantity" type="number" min="1" step="1"
+              class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Giá bán</label>
+            <input id="edit-sellingprice" type="number" min="0" step="1"
+              class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Giá nhập</label>
+            <input id="edit-purchaseprice" type="number" min="0" step="1"
+              class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">Ghi chú</label>
+          <input id="edit-note" type="text" maxlength="200"
+            class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+        </div>
+        <div class="flex gap-2 justify-end pt-1">
+          <button id="btn-edit-cancel" type="button"
+            class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Hủy</button>
+          <button id="btn-edit-save" type="button"
+            class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-4 py-2 text-sm font-medium">Lưu thay đổi</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <footer class="max-w-7xl mx-auto px-4 sm:px-6 pb-10 text-xs text-slate-500">
@@ -221,7 +303,6 @@
       products: [],
       columns: [],
       keys: { maSP: null, tenSP: null, donVi: null, giaBan: null, giaNhap: null },
-      selected: null,
       phieu: [],
       usedIds: new Set()
     };
@@ -489,12 +570,10 @@
 
     /* ========== Bảng sản phẩm ========== */
     function orderedColumns() {
-      const priority = [
-        state.keys.maSP, state.keys.tenSP, state.keys.donVi,
-        state.keys.giaBan, state.keys.giaNhap
+      // Chỉ hiển thị 4 cột: Mã SP, Tên SP, Đơn vị, Giá bán
+      return [
+        state.keys.maSP, state.keys.tenSP, state.keys.donVi, state.keys.giaBan
       ].filter(Boolean);
-      const rest = state.columns.filter((c) => !priority.includes(c));
-      return [...priority, ...rest];
     }
 
     function renderProductHead() {
@@ -525,11 +604,11 @@
       $("product-empty").classList.toggle("hidden", filtered.length > 0 || !state.products.length);
       $("product-body").innerHTML = filtered.map((p) => {
         const ma = getField(p, "maSP");
-        const active = selectedId && ma === selectedId;
+        const inPhieu = state.phieu.some((r) => r.productId === ma);
         const cells = cols.map((c) =>
           `<td class="px-4 py-2.5 whitespace-nowrap ${c === tenCol ? "font-medium text-ink" : "text-slate-600"}">${escapeHtml(formatCell(p[c]))}</td>`
         ).join("");
-        return `<tr data-masp="${escapeHtml(ma)}" class="cursor-pointer hover:bg-pine-50 ${active ? "bg-pine-100" : ""}">${cells}</tr>`;
+        return `<tr data-masp="${escapeHtml(ma)}" class="cursor-pointer select-none hover:bg-pine-50 ${inPhieu ? "bg-pine-50 ring-1 ring-inset ring-pine-200" : ""}">${cells}</tr>`;
       }).join("");
     }
 
@@ -538,90 +617,82 @@
       return state.products.find((p) => String(p[col]) === String(maSP));
     }
 
-    function selectProduct(product) {
-      state.selected = product;
-      $("selected-empty").classList.add("hidden");
-      $("form-xuat").classList.remove("hidden");
-      $("form-masp").value = getField(product, "maSP");
-      $("form-tensp").value = getField(product, "tenSP");
-      $("form-donvi").value = getField(product, "donVi") || "—";
-      $("form-soluong").value = 1;
-      $("form-giaban").value = toNumber(getField(product, "giaBan"), 0);
-      $("form-gianhap").value = toNumber(getField(product, "giaNhap"), 0);
-      $("form-ghichu").value = "";
-      renderProducts();
-      $("form-soluong").focus();
-      $("form-soluong").select();
-    }
-
-    function clearSelection() {
-      state.selected = null;
-      $("form-xuat").classList.add("hidden");
-      $("selected-empty").classList.remove("hidden");
-      renderProducts();
-    }
-
     /* ========== Phiếu xuất ========== */
-    function addToPhieu(payload) {
-      const soLuong = Number(payload.soLuong);
-      const giaBan = toNumber(payload.giaBan, 0);
-      const giaNhap = toNumber(payload.giaNhap, 0);
-      if (!payload.maSP || !payload.tenSP) {
-        toast("Chưa chọn sản phẩm hợp lệ.", "error");
-        return false;
+    function addToPhieu(product) {
+      const maSP   = getField(product, "maSP");
+      const tenSP  = getField(product, "tenSP");
+      const donVi  = getField(product, "donVi");
+      const giaBan = toNumber(getField(product, "giaBan"), 0);
+      const giaNhap= toNumber(getField(product, "giaNhap"), 0);
+
+      // Nếu đã có trong phiếu → tăng số lượng thêm 1
+      const existing = state.phieu.find((r) => r.productId === maSP);
+      if (existing) {
+        existing.quantity += 1;
+        existing.updatedAt = unixNow();
+        renderPhieu();
+        renderProducts(); // cập nhật highlight
+        toast(`${tenSP} → SL ${existing.quantity}`, "info");
+        return;
       }
-      if (!Number.isFinite(soLuong) || soLuong <= 0) {
-        toast("Số lượng phải lớn hơn 0.", "error");
-        return false;
-      }
-      if (giaBan < 0 || giaNhap < 0) {
-        toast("Giá không được âm.", "error");
-        return false;
-      }
+
       const now = unixNow();
       state.phieu.push({
         id: genLineId(),
-        productId: payload.maSP,
-        productName: payload.tenSP,
-        donVi: payload.donVi || "",
-        quantity: soLuong,
+        productId: maSP,
+        productName: tenSP,
+        donVi: donVi || "",
+        date: todayInputValue(),   // YYYY-MM-DD, mặc định hôm nay
+        quantity: 1,
         sellingPrice: giaBan,
         purchasePrice: giaNhap,
-        note: (payload.ghiChu || "").trim(),
+        note: "",
         createdAt: now,
         updatedAt: now
       });
       renderPhieu();
-      toast(`Đã thêm ${payload.tenSP} (SL ${soLuong})`, "success");
-      return true;
+      renderProducts(); // cập nhật highlight
+      toast(`Đã thêm ${tenSP}`, "success");
     }
 
     function renderPhieu() {
       const hasRows = state.phieu.length > 0;
       $("phieu-empty").classList.toggle("hidden", hasRows);
-      $("btn-xuat-csv").disabled = !hasRows;
       $("btn-xoa-phieu").disabled = !hasRows;
+      $("btn-xuat-sheets").disabled = !hasRows;
 
       const tongSL = state.phieu.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
       $("phieu-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
       $("phieu-summary").textContent = hasRows
-        ? `${state.phieu.length} dòng · Tổng số lượng ${tongSL.toLocaleString("vi-VN")}`
+        ? `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")}`
         : "Chưa có sản phẩm nào trong phiếu.";
 
       $("phieu-body").innerHTML = state.phieu.map((row, idx) => `
         <tr data-id="${escapeHtml(row.id)}">
-          <td class="px-4 py-2.5 text-slate-500">${idx + 1}</td>
-          <td class="px-4 py-2.5 whitespace-nowrap">${escapeHtml(row.productId)}</td>
+          <td class="px-4 py-2.5 text-slate-400 text-xs">${idx + 1}</td>
+          <td class="px-4 py-2.5 whitespace-nowrap font-mono text-xs">${escapeHtml(row.productId)}</td>
           <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName)}</td>
-          <td class="px-4 py-2.5">${escapeHtml(row.donVi || "—")}</td>
+          <td class="px-4 py-2.5 text-slate-500">${escapeHtml(row.donVi || "—")}</td>
           <td class="px-4 py-2.5">
-            <input type="number" min="1" step="1" value="${escapeHtml(row.quantity)}"
-              data-action="qty"
-              class="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <input type="date" value="${escapeHtml(row.date || todayInputValue())}"
+              data-action="date"
+              class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
           </td>
-          <td class="px-4 py-2.5 whitespace-nowrap">${escapeHtml(formatMoney(row.sellingPrice))}</td>
-          <td class="px-4 py-2.5 whitespace-nowrap">${escapeHtml(formatMoney(row.purchasePrice))}</td>
-          <td class="px-4 py-2.5 text-slate-600">${escapeHtml(row.note || "—")}</td>
+          <td class="px-4 py-2.5">
+            <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
+              data-action="qty"
+              class="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </td>
+          <td class="px-4 py-2.5">
+            <input type="number" min="0" step="1" value="${escapeHtml(String(row.sellingPrice))}"
+              data-action="price"
+              class="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </td>
+          <td class="px-4 py-2.5">
+            <input type="text" maxlength="200" value="${escapeHtml(row.note || "")}"
+              data-action="note" placeholder="Ghi chú…"
+              class="w-36 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </td>
           <td class="px-4 py-2.5 text-right">
             <button type="button" data-action="delete"
               class="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Xóa</button>
@@ -630,25 +701,33 @@
       `).join("");
     }
 
-    function updateQuantity(id, value) {
+    function updatePhieuField(id, field, value) {
       const row = state.phieu.find((r) => r.id === id);
       if (!row) return;
-      const soLuong = Number(value);
-      if (!Number.isFinite(soLuong) || soLuong <= 0) {
-        toast("Số lượng phải lớn hơn 0.", "warning");
-        renderPhieu();
-        return;
+      if (field === "qty") {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) { toast("Số lượng phải lớn hơn 0.", "warning"); renderPhieu(); return; }
+        row.quantity = n;
+      } else if (field === "price") {
+        const n = Number(value);
+        if (n < 0) { toast("Giá không được âm.", "warning"); renderPhieu(); return; }
+        row.sellingPrice = n;
+      } else if (field === "note") {
+        row.note = value;
+      } else if (field === "date") {
+        row.date = value; // YYYY-MM-DD
       }
-      row.quantity = soLuong;
       row.updatedAt = unixNow();
+      // Cập nhật summary mà không re-render toàn bộ
       const tongSL = state.phieu.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
-      $("phieu-summary").textContent = `${state.phieu.length} dòng · Tổng số lượng ${tongSL.toLocaleString("vi-VN")}`;
+      $("phieu-summary").textContent = `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")}`;
     }
 
     function removeRow(id) {
       const row = state.phieu.find((r) => r.id === id);
       state.phieu = state.phieu.filter((r) => r.id !== id);
       renderPhieu();
+      renderProducts(); // cập nhật highlight
       toast(row ? `Đã xóa ${row.productName}` : "Đã xóa dòng", "info");
     }
 
@@ -703,44 +782,335 @@
       toast(`Đã xuất ${filename}`, "success");
     }
 
+    /* ========== Google Sheets — URL cố định ========== */
+    var SHEETS_URL = "https://script.google.com/macros/s/AKfycbwdleboFPOhYW4y7JNAyVMgtLuPrjyEEFzf3oveJ9WiurbwsyVXXWwRaItEkpmfEm0/exec";
+
+    function getSheetsUrl() {
+      return SHEETS_URL;
+    }
+
+    async function exportToSheets() {
+      const url = SHEETS_URL;
+      if (!state.phieu.length) {
+        toast("Phiếu xuất đang trống.", "error");
+        return;
+      }
+
+      const now = unixNow();
+      const rows = state.phieu.map((row) => ({
+        id: row.id,
+        date: formatNgayXuat(row.date || todayInputValue()),
+        productId: row.productId,
+        productName: row.productName,
+        quantity: row.quantity,
+        sellingPrice: row.sellingPrice,
+        purchasePrice: row.purchasePrice,
+        note: row.note,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt || now
+      }));
+
+      $("btn-xuat-sheets").disabled = true;
+      $("btn-xuat-sheets").textContent = "Đang gửi…";
+
+      try {
+        await fetch(url, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ rows })
+        });
+        toast("Đã gửi " + rows.length + " dòng lên Google Sheets!", "success");
+        // Xóa phiếu xuất sau khi gửi thành công
+        state.phieu = [];
+        renderPhieu();
+        loadSheetHistory();
+      } catch (err) {
+        toast("Lỗi khi gửi lên Sheets: " + err.message, "error");
+      } finally {
+        $("btn-xuat-sheets").disabled = !state.phieu.length;
+        $("btn-xuat-sheets").innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Xuất lên Google Sheets`;
+      }
+    }
+
+    /* ========== Quản lý xuất hàng (Google Sheets) ========== */
+    var sheetHistory = [];       // toàn bộ dữ liệu từ Sheet
+    var historySelected = new Set(); // ids đang được chọn
+
+    // Normalize chuỗi date về DD-MM-YYYY — xử lý cả Date object stringify lẫn plain text
+    function normalizeDateVN(raw) {
+      if (!raw) return "";
+      var s = String(raw).trim();
+      // Đã đúng định dạng DD-MM-YYYY
+      if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
+      // Chuỗi dạng "Sat Aug 29 2026 00:00:00 GMT+0700..."
+      var parsed = new Date(s);
+      if (!isNaN(parsed.getTime())) {
+        var dd = String(parsed.getDate()).padStart(2, "0");
+        var mm = String(parsed.getMonth() + 1).padStart(2, "0");
+        return dd + "-" + mm + "-" + parsed.getFullYear();
+      }
+      return s;
+    }
+
+    function getFilteredHistory() {
+      const keyword   = ($("history-search").value || "").trim().toLowerCase();
+      const dateFilter = ($("history-filter-date").value || "").trim(); // YYYY-MM-DD
+      // Chuyển date filter sang DD-MM-YYYY để so sánh với cột date trong Sheet
+      const dateStr = dateFilter ? formatNgayXuat(dateFilter) : "";
+
+      return sheetHistory.filter((r) => {
+        const matchDate = !dateStr || (r.date || "") === dateStr;
+        const matchKw   = !keyword ||
+          (r.productId   || "").toLowerCase().includes(keyword) ||
+          (r.productName || "").toLowerCase().includes(keyword) ||
+          (r.note        || "").toLowerCase().includes(keyword);
+        return matchDate && matchKw;
+      });
+    }
+
+    function renderHistory() {
+      const filtered = getFilteredHistory();
+      const total    = sheetHistory.length;
+      const isEmpty  = filtered.length === 0;
+
+      $("history-empty").classList.toggle("hidden", !isEmpty);
+      $("btn-export-sheets-csv").disabled = filtered.length === 0;
+
+      const dateFilter = $("history-filter-date").value;
+      const keyword    = ($("history-search").value || "").trim();
+      const isFiltered = dateFilter || keyword;
+
+      $("history-summary").textContent = isFiltered
+        ? `Hiển thị ${filtered.length} / ${total} dòng`
+        : `${total} dòng · cập nhật lúc ${new Date().toLocaleTimeString("vi-VN")}`;
+
+      $("history-body").innerHTML = filtered.map((row, idx) => {
+        const checked = historySelected.has(row.id) ? "checked" : "";
+        return `
+          <tr data-rowid="${escapeHtml(row.id)}" class="hover:bg-pine-50 ${historySelected.has(row.id) ? "bg-pine-50" : ""}">
+            <td class="px-3 py-2.5">
+              <input type="checkbox" data-action="rowcheck" value="${escapeHtml(row.id)}" ${checked} class="rounded" />
+            </td>
+            <td class="px-4 py-2.5 text-slate-400 text-xs">${idx + 1}</td>
+            <td class="px-4 py-2.5 whitespace-nowrap text-slate-600">${escapeHtml(row.date || "")}</td>
+            <td class="px-4 py-2.5 whitespace-nowrap font-mono text-xs">${escapeHtml(row.productId || "")}</td>
+            <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName || "")}</td>
+            <td class="px-4 py-2.5 text-right font-medium">${escapeHtml(String(row.quantity || ""))}</td>
+            <td class="px-4 py-2.5 text-right whitespace-nowrap">${row.sellingPrice ? Number(row.sellingPrice).toLocaleString("vi-VN") : "—"}</td>
+            <td class="px-4 py-2.5 text-right whitespace-nowrap">${row.purchasePrice ? Number(row.purchasePrice).toLocaleString("vi-VN") : "—"}</td>
+            <td class="px-4 py-2.5 text-slate-500 max-w-[12rem] truncate">${escapeHtml(row.note || "—")}</td>
+            <td class="px-4 py-2.5 text-right whitespace-nowrap">
+              <button type="button" data-action="editrow" data-rowid="${escapeHtml(row.id)}"
+                class="rounded-lg px-3 py-1.5 text-sm text-pine-700 hover:bg-pine-50 border border-pine-200">Sửa</button>
+            </td>
+          </tr>`;
+      }).join("");
+
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const count = historySelected.size;
+      const countEl = $("history-selected-count");
+      if (countEl) countEl.textContent = count;
+      $("btn-history-delete").disabled = count === 0;
+
+      // Sync checkbox "chọn tất cả"
+      const filtered   = getFilteredHistory();
+      const allChecked = filtered.length > 0 && filtered.every((r) => historySelected.has(r.id));
+      $("history-check-all").checked       = allChecked;
+      $("history-check-all").indeterminate = !allChecked && filtered.some((r) => historySelected.has(r.id));
+    }
+
+    async function loadSheetHistory() {
+      $("history-summary").textContent = "Đang tải dữ liệu từ Google Sheets…";
+      $("history-error").classList.add("hidden");
+      $("history-body").innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-slate-400 text-sm">Đang tải…</td></tr>`;
+
+      try {
+        const res = await fetch(SHEETS_URL, { method: "GET" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.status === "error") throw new Error(data.message);
+        sheetHistory = (data.rows || []).map((r) => {
+          r.date = normalizeDateVN(r.date);
+          return r;
+        }).reverse();
+        historySelected.clear();
+        renderHistory();
+      } catch (err) {
+        $("history-error").textContent = "Không tải được dữ liệu: " + err.message;
+        $("history-error").classList.remove("hidden");
+        $("history-summary").textContent = "Tải thất bại.";
+        $("history-body").innerHTML = "";
+      }
+    }
+
+    async function deleteSelectedRows() {
+      const ids = [...historySelected];
+      if (!ids.length) return;
+      if (!confirm(`Xóa ${ids.length} dòng đã chọn khỏi Google Sheets?`)) return;
+
+      $("btn-history-delete").disabled = true;
+      $("btn-history-delete").textContent = "Đang xóa…";
+
+      try {
+        await fetch(SHEETS_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "delete", ids })
+        });
+        toast(`Đã xóa ${ids.length} dòng.`, "success");
+        // Xóa optimistic khỏi local state luôn
+        sheetHistory = sheetHistory.filter((r) => !historySelected.has(r.id));
+        historySelected.clear();
+        renderHistory();
+      } catch (err) {
+        toast("Lỗi khi xóa: " + err.message, "error");
+      } finally {
+        $("btn-history-delete").disabled = historySelected.size === 0;
+        $("btn-history-delete").innerHTML =
+          `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Xóa đã chọn (<span id="history-selected-count">${historySelected.size}</span>)`;
+      }
+    }
+
+    /* ── Modal sửa dòng ── */
+    function openEditModal(rowId) {
+      const row = sheetHistory.find((r) => r.id === rowId);
+      if (!row) return;
+
+      $("edit-id").value           = row.id;
+      $("edit-productid").value    = row.productId || "";
+      $("edit-productname").value  = row.productName || "";
+      $("edit-quantity").value     = row.quantity || "";
+      $("edit-sellingprice").value = row.sellingPrice || "";
+      $("edit-purchaseprice").value= row.purchasePrice || "";
+      $("edit-note").value         = row.note || "";
+
+      // Chuyển DD-MM-YYYY → YYYY-MM-DD cho input[type=date]
+      if (row.date) {
+        const parts = row.date.split("-");
+        if (parts.length === 3) {
+          $("edit-date").value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+
+      $("edit-modal").classList.remove("hidden");
+      $("edit-quantity").focus();
+    }
+
+    function closeEditModal() {
+      $("edit-modal").classList.add("hidden");
+    }
+
+    async function saveEditModal() {
+      const id            = $("edit-id").value;
+      const quantityRaw   = Number($("edit-quantity").value);
+      const sellingPrice  = Number($("edit-sellingprice").value);
+      const purchasePrice = Number($("edit-purchaseprice").value);
+      const note          = $("edit-note").value.trim();
+      const dateIso       = $("edit-date").value;
+
+      if (!Number.isFinite(quantityRaw) || quantityRaw <= 0) {
+        toast("Số lượng phải lớn hơn 0.", "error"); return;
+      }
+      if (sellingPrice < 0 || purchasePrice < 0) {
+        toast("Giá không được âm.", "error"); return;
+      }
+
+      $("btn-edit-save").disabled    = true;
+      $("btn-edit-save").textContent = "Đang lưu…";
+
+      try {
+        await fetch(SHEETS_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            action: "update",
+            row: {
+              id,
+              date: dateIso ? formatNgayXuat(dateIso) : undefined,
+              quantity: quantityRaw,
+              sellingPrice,
+              purchasePrice,
+              note,
+              updatedAt: unixNow()
+            }
+          })
+        });
+        // Cập nhật optimistic local state
+        const local = sheetHistory.find((r) => r.id === id);
+        if (local) {
+          if (dateIso) local.date = formatNgayXuat(dateIso);
+          local.quantity      = String(quantityRaw);
+          local.sellingPrice  = String(sellingPrice);
+          local.purchasePrice = String(purchasePrice);
+          local.note          = note;
+        }
+        toast("Đã cập nhật thành công.", "success");
+        closeEditModal();
+        renderHistory();
+      } catch (err) {
+        toast("Lỗi khi lưu: " + err.message, "error");
+      } finally {
+        $("btn-edit-save").disabled    = false;
+        $("btn-edit-save").textContent = "Lưu thay đổi";
+      }
+    }
+
+    /* ── Xuất CSV từ dữ liệu Sheets ── */
+    function exportSheetsCSV() {
+      const filtered = getFilteredHistory();
+      if (!filtered.length) {
+        toast("Không có dữ liệu để xuất.", "error"); return;
+      }
+
+      const lines = [EXPORT_HEADER.map(csvEscape).join(",")];
+      filtered.forEach((row) => {
+        lines.push([
+          row.id, row.date, row.productId, row.productName,
+          row.quantity, row.sellingPrice, row.purchasePrice,
+          row.note, row.createdAt, row.updatedAt
+        ].map(csvEscape).join(","));
+      });
+
+      const dateFilter = $("history-filter-date").value;
+      const datePart   = dateFilter
+        ? formatNgayXuat(dateFilter).replace(/-/g, "")
+        : "TatCa";
+      const filename = `PhieuXuat_${datePart}.csv`;
+
+      const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Đã xuất ${filtered.length} dòng → ${filename}`, "success");
+    }
+
     /* ========== Sự kiện ========== */
     $("search").addEventListener("input", renderProducts);
 
-    $("product-body").addEventListener("click", (e) => {
+    $("product-body").addEventListener("dblclick", (e) => {
       const tr = e.target.closest("tr[data-masp]");
       if (!tr) return;
       const product = findProductByMa(tr.getAttribute("data-masp"));
-      if (product) selectProduct(product);
+      if (product) addToPhieu(product);
     });
-
-    $("form-xuat").addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (!state.selected) {
-        toast("Hãy chọn sản phẩm trước.", "error");
-        return;
-      }
-      const ok = addToPhieu({
-        maSP: getField(state.selected, "maSP"),
-        tenSP: getField(state.selected, "tenSP"),
-        donVi: getField(state.selected, "donVi"),
-        soLuong: $("form-soluong").value,
-        giaBan: $("form-giaban").value,
-        giaNhap: $("form-gianhap").value,
-        ghiChu: $("form-ghichu").value
-      });
-      if (ok) {
-        $("form-soluong").value = 1;
-        $("form-ghichu").value = "";
-        $("form-soluong").focus();
-      }
-    });
-
-    $("btn-bo-chon").addEventListener("click", clearSelection);
 
     $("phieu-body").addEventListener("change", (e) => {
       const tr = e.target.closest("tr[data-id]");
-      if (!tr || e.target.getAttribute("data-action") !== "qty") return;
-      updateQuantity(tr.getAttribute("data-id"), e.target.value);
+      if (!tr) return;
+      const action = e.target.getAttribute("data-action");
+      const id = tr.getAttribute("data-id");
+      if (action === "qty")   updatePhieuField(id, "qty",   e.target.value);
+      if (action === "price") updatePhieuField(id, "price", e.target.value);
+      if (action === "note")  updatePhieuField(id, "note",  e.target.value);
+      if (action === "date")  updatePhieuField(id, "date",  e.target.value);
     });
 
     $("phieu-body").addEventListener("click", (e) => {
@@ -750,20 +1120,76 @@
       if (tr) removeRow(tr.getAttribute("data-id"));
     });
 
-    $("btn-xuat-csv").addEventListener("click", exportCSV);
+    $("btn-apply-date").addEventListener("click", () => {
+      const val = $("ngay-xuat").value;
+      if (!val) { toast("Vui lòng chọn ngày trước.", "warning"); return; }
+      state.phieu.forEach((r) => { r.date = val; r.updatedAt = unixNow(); });
+      renderPhieu();
+      toast(`Đã áp dụng ngày ${formatNgayXuat(val)} cho tất cả dòng.`, "success");
+    });
 
     $("btn-xoa-phieu").addEventListener("click", () => {
       if (!state.phieu.length) return;
       if (confirm("Xóa toàn bộ sản phẩm trong phiếu xuất hiện tại?")) {
         state.phieu = [];
         renderPhieu();
+        renderProducts();
         toast("Đã xóa toàn bộ phiếu xuất.", "info");
       }
+    });
+
+    $("btn-xuat-sheets").addEventListener("click", exportToSheets);
+
+    // Quản lý xuất hàng
+    $("btn-reload-history").addEventListener("click", loadSheetHistory);
+    $("history-search").addEventListener("input", renderHistory);
+    $("history-filter-date").addEventListener("change", renderHistory);
+    $("btn-history-clear-date").addEventListener("click", () => {
+      $("history-filter-date").value = "";
+      renderHistory();
+    });
+    $("btn-history-delete").addEventListener("click", deleteSelectedRows);
+    $("btn-export-sheets-csv").addEventListener("click", exportSheetsCSV);
+
+    // Checkbox chọn tất cả
+    $("history-check-all").addEventListener("change", (e) => {
+      const filtered = getFilteredHistory();
+      if (e.target.checked) {
+        filtered.forEach((r) => historySelected.add(r.id));
+      } else {
+        filtered.forEach((r) => historySelected.delete(r.id));
+      }
+      renderHistory();
+    });
+
+    // Checkbox từng dòng + nút Sửa (event delegation)
+    $("history-body").addEventListener("change", (e) => {
+      if (e.target.getAttribute("data-action") !== "rowcheck") return;
+      const id = e.target.value;
+      if (e.target.checked) historySelected.add(id);
+      else historySelected.delete(id);
+      updateSelectionUI();
+      // Highlight dòng
+      const tr = e.target.closest("tr");
+      if (tr) tr.classList.toggle("bg-pine-50", e.target.checked);
+    });
+
+    $("history-body").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='editrow']");
+      if (btn) openEditModal(btn.getAttribute("data-rowid"));
+    });
+
+    // Modal sửa
+    $("btn-edit-cancel").addEventListener("click", closeEditModal);
+    $("btn-edit-save").addEventListener("click", saveEditModal);
+    $("edit-modal").addEventListener("click", (e) => {
+      if (e.target === $("edit-modal")) closeEditModal();
     });
 
     $("ngay-xuat").value = todayInputValue();
     renderPhieu();
     loadProducts();
+    loadSheetHistory();
   </script>
 </body>
 </html>

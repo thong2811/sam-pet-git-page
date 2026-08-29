@@ -1,0 +1,5 @@
+# Kiro IDE
+.kiro/
+
+# Apps Script source (deploy riêng trên Google)
+apps-script/
