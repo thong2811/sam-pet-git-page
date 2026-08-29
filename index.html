@@ -55,6 +55,31 @@
     }
     .toast-enter { animation: toast-in 0.22s ease-out; }
 
+    /* Splash screen */
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: #0f2f2a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    #splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #splash img { width: 96px; height: 96px; object-fit: cover; border-radius: 22px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    #splash p { color: #d5ebe4; font-size: 14px; letter-spacing: 0.05em; }
+    @keyframes splash-pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    #splash p { animation: splash-pulse 1.2s ease-in-out infinite; }
+
     /* Pull to refresh */
     #ptr-indicator {
       position: fixed;
@@ -80,6 +105,12 @@
   </style>
 </head>
 <body class="bg-paper text-ink min-h-screen">
+  <!-- Splash screen -->
+  <div id="splash">
+    <img src="icons/apple-touch-icon.png" alt="SAM Pet" />
+    <p>Đang tải dữ liệu…</p>
+  </div>
+
   <div id="ptr-indicator">
     <svg id="ptr-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -588,6 +619,10 @@
       return col ? (product[col] || "") : "";
     }
 
+    function hideSplash() {
+      $("splash").classList.add("hidden");
+    }
+
     /* ========== Tải products.csv, fallback product.csv ========== */
     async function loadProducts() {
       const files = ["products.csv", "product.csv"];
@@ -623,6 +658,7 @@
           $("product-count").textContent = `Đã tải ${products.length} sản phẩm từ ${file}`;
           $("product-error").classList.add("hidden");
           toast(`Đã tải ${products.length} sản phẩm từ ${file}`, "success");
+          hideSplash();
           return;
         } catch (err) {
           lastError = `Lỗi khi tải ${file}: ${err.message}`;
