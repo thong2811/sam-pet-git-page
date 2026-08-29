@@ -90,12 +90,14 @@
         </div>
       </div>
       <div id="product-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
-      <div class="overflow-x-auto scroll-thin max-h-[28rem]">
+      <div class="overflow-x-auto scroll-thin max-h-[28rem] hidden sm:block">
         <table class="min-w-full text-sm">
           <thead id="product-head" class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide"></thead>
           <tbody id="product-body" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
+      <!-- Mobile card list -->
+      <div id="product-cards" class="sm:hidden divide-y divide-slate-100 max-h-[28rem] overflow-y-auto scroll-thin"></div>
       <div id="product-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
         Không tìm thấy sản phẩm phù hợp.
       </div>
@@ -134,7 +136,7 @@
           </button>
         </div>
       </div>
-      <div class="overflow-x-auto scroll-thin">
+      <div class="overflow-x-auto scroll-thin hidden sm:block">
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50 text-slate-600 text-left text-xs uppercase tracking-wide">
             <tr>
@@ -152,6 +154,8 @@
           <tbody id="phieu-body" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
+      <!-- Mobile card list -->
+      <div id="phieu-cards" class="sm:hidden divide-y divide-slate-100"></div>
       <div id="phieu-empty" class="px-5 py-10 text-center text-sm text-slate-500">
         Phiếu xuất đang trống. Double-click vào sản phẩm để thêm vào phiếu.
       </div>
@@ -213,7 +217,7 @@
         </div>
       </div>
       <div id="history-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
-      <div class="overflow-x-auto scroll-thin max-h-[36rem]">
+      <div class="overflow-x-auto scroll-thin max-h-[36rem] hidden sm:block">
         <table class="min-w-full text-sm">
           <thead class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
             <tr>
@@ -234,6 +238,8 @@
           <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
+      <!-- Mobile card list -->
+      <div id="history-cards" class="sm:hidden divide-y divide-slate-100 max-h-[36rem] overflow-y-auto scroll-thin"></div>
       <div id="history-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
         Chưa có dữ liệu xuất hàng.
       </div>
@@ -602,6 +608,8 @@
         : `Đã tải ${state.products.length} sản phẩm`;
 
       $("product-empty").classList.toggle("hidden", filtered.length > 0 || !state.products.length);
+
+      // Desktop: bảng
       $("product-body").innerHTML = filtered.map((p) => {
         const ma = getField(p, "maSP");
         const inPhieu = state.phieu.some((r) => r.productId === ma);
@@ -609,6 +617,27 @@
           `<td class="px-4 py-2.5 whitespace-nowrap ${c === tenCol ? "font-medium text-ink" : "text-slate-600"}">${escapeHtml(formatCell(p[c]))}</td>`
         ).join("");
         return `<tr data-masp="${escapeHtml(ma)}" class="cursor-pointer select-none hover:bg-pine-50 ${inPhieu ? "bg-pine-50 ring-1 ring-inset ring-pine-200" : ""}">${cells}</tr>`;
+      }).join("");
+
+      // Mobile: card list
+      $("product-cards").innerHTML = filtered.map((p) => {
+        const ma      = getField(p, "maSP");
+        const ten     = getField(p, "tenSP");
+        const donVi   = getField(p, "donVi");
+        const giaBan  = getField(p, "giaBan");
+        const inPhieu = state.phieu.some((r) => r.productId === ma);
+        return `
+          <div data-masp="${escapeHtml(ma)}"
+            class="product-card flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 active:bg-pine-50 cursor-pointer select-none ${inPhieu ? "bg-pine-50" : ""}">
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-sm truncate">${escapeHtml(ten)}</p>
+              <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(ma)} · ${escapeHtml(donVi || "—")}</p>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-sm font-semibold text-pine-700">${giaBan ? Number(giaBan).toLocaleString("vi-VN") : "—"}</p>
+              ${inPhieu ? `<span class="text-xs text-pine-600">✓ Đã thêm</span>` : `<span class="text-xs text-slate-400">Nhấn 2× để thêm</span>`}
+            </div>
+          </div>`;
       }).join("");
     }
 
@@ -698,6 +727,46 @@
               class="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Xóa</button>
           </td>
         </tr>
+      `).join("");
+
+      // Mobile cards
+      $("phieu-cards").innerHTML = state.phieu.map((row, idx) => `
+        <div data-id="${escapeHtml(row.id)}" class="px-4 py-3 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-medium text-sm">${escapeHtml(row.productName)}</p>
+              <p class="text-xs text-slate-500">${escapeHtml(row.productId)} · ${escapeHtml(row.donVi || "—")}</p>
+            </div>
+            <button type="button" data-action="delete"
+              class="shrink-0 rounded-lg px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 border border-red-100">Xóa</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Ngày xuất</label>
+              <input type="date" value="${escapeHtml(row.date || todayInputValue())}"
+                data-action="date"
+                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Số lượng</label>
+              <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
+                data-action="qty"
+                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Giá bán</label>
+              <input type="number" min="0" step="1" value="${escapeHtml(String(row.sellingPrice))}"
+                data-action="price"
+                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Ghi chú</label>
+              <input type="text" maxlength="200" value="${escapeHtml(row.note || "")}"
+                data-action="note" placeholder="Ghi chú…"
+                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+          </div>
+        </div>
       `).join("");
     }
 
@@ -907,6 +976,31 @@
           </tr>`;
       }).join("");
 
+      // Mobile cards
+      $("history-cards").innerHTML = filtered.map((row) => {
+        const checked = historySelected.has(row.id) ? "checked" : "";
+        const selBg   = historySelected.has(row.id) ? "bg-pine-50" : "";
+        return `
+          <div class="px-4 py-3 space-y-1.5 ${selBg}">
+            <div class="flex items-start justify-between gap-2">
+              <label class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                <input type="checkbox" data-action="rowcheck" value="${escapeHtml(row.id)}" ${checked} class="rounded shrink-0" />
+                <div class="min-w-0">
+                  <p class="font-medium text-sm truncate">${escapeHtml(row.productName || "")}</p>
+                  <p class="text-xs text-slate-500">${escapeHtml(row.productId || "")} · ${escapeHtml(row.date || "")}</p>
+                </div>
+              </label>
+              <button type="button" data-action="editrow" data-rowid="${escapeHtml(row.id)}"
+                class="shrink-0 rounded-lg px-2.5 py-1 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">Sửa</button>
+            </div>
+            <div class="flex gap-4 text-xs text-slate-600 pl-6">
+              <span>SL: <strong>${escapeHtml(String(row.quantity || ""))}</strong></span>
+              <span>Giá: <strong>${row.sellingPrice ? Number(row.sellingPrice).toLocaleString("vi-VN") : "—"}</strong></span>
+              ${row.note ? `<span class="truncate">📝 ${escapeHtml(row.note)}</span>` : ""}
+            </div>
+          </div>`;
+      }).join("");
+
       updateSelectionUI();
     }
 
@@ -1102,6 +1196,13 @@
       if (product) addToPhieu(product);
     });
 
+    $("product-cards").addEventListener("dblclick", (e) => {
+      const card = e.target.closest("[data-masp]");
+      if (!card) return;
+      const product = findProductByMa(card.getAttribute("data-masp"));
+      if (product) addToPhieu(product);
+    });
+
     $("phieu-body").addEventListener("change", (e) => {
       const tr = e.target.closest("tr[data-id]");
       if (!tr) return;
@@ -1118,6 +1219,24 @@
       if (!btn) return;
       const tr = btn.closest("tr[data-id]");
       if (tr) removeRow(tr.getAttribute("data-id"));
+    });
+
+    $("phieu-cards").addEventListener("change", (e) => {
+      const card = e.target.closest("[data-id]");
+      if (!card) return;
+      const action = e.target.getAttribute("data-action");
+      const id = card.getAttribute("data-id");
+      if (action === "qty")   updatePhieuField(id, "qty",   e.target.value);
+      if (action === "price") updatePhieuField(id, "price", e.target.value);
+      if (action === "note")  updatePhieuField(id, "note",  e.target.value);
+      if (action === "date")  updatePhieuField(id, "date",  e.target.value);
+    });
+
+    $("phieu-cards").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='delete']");
+      if (!btn) return;
+      const card = btn.closest("[data-id]");
+      if (card) removeRow(card.getAttribute("data-id"));
     });
 
     $("btn-apply-date").addEventListener("click", () => {
@@ -1169,12 +1288,27 @@
       if (e.target.checked) historySelected.add(id);
       else historySelected.delete(id);
       updateSelectionUI();
-      // Highlight dòng
       const tr = e.target.closest("tr");
       if (tr) tr.classList.toggle("bg-pine-50", e.target.checked);
     });
 
     $("history-body").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='editrow']");
+      if (btn) openEditModal(btn.getAttribute("data-rowid"));
+    });
+
+    // Mobile history cards
+    $("history-cards").addEventListener("change", (e) => {
+      if (e.target.getAttribute("data-action") !== "rowcheck") return;
+      const id = e.target.value;
+      if (e.target.checked) historySelected.add(id);
+      else historySelected.delete(id);
+      updateSelectionUI();
+      const card = e.target.closest("[class*='px-4 py-3']");
+      if (card) card.classList.toggle("bg-pine-50", e.target.checked);
+    });
+
+    $("history-cards").addEventListener("click", (e) => {
       const btn = e.target.closest("[data-action='editrow']");
       if (btn) openEditModal(btn.getAttribute("data-rowid"));
     });
