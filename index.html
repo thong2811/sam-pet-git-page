@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAM Pet — Phiếu xuất hàng</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#1a2e2b",
+            paper: "#f4efe6",
+            pine: {
+              50: "#eef7f4",
+              100: "#d5ebe4",
+              500: "#2a7a6a",
+              600: "#1f5f53",
+              700: "#174a41",
+              800: "#133c35",
+              900: "#0f2f2a"
+            },
+            clay: {
+              500: "#d9783a",
+              600: "#c45f22"
+            }
+          },
+          boxShadow: {
+            card: "0 10px 30px -12px rgba(19, 60, 53, 0.18)",
+            lift: "0 18px 40px -16px rgba(19, 60, 53, 0.28)"
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif; }
+    .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: #b7cfc8; border-radius: 99px; }
+    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .toast-enter { animation: toast-in 0.22s ease-out; }
+  </style>
+</head>
+<body class="bg-paper text-ink min-h-screen">
+  <header class="bg-pine-900 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-clay-500 shadow-lift">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        </span>
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-pine-100/80">SAM Pet</p>
+          <h1 class="text-xl sm:text-2xl font-semibold leading-tight">Phiếu xuất hàng hàng ngày</h1>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        <span id="status-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+          <span class="h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
+          Đang tải sản phẩm…
+        </span>
+        <span id="phieu-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+          Phiếu: 0 dòng
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <!-- Thông tin phiếu + form nhập -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-1 bg-white rounded-2xl shadow-card p-5">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-pine-700 mb-3">Thông tin phiếu</h2>
+        <label class="block text-sm text-slate-600 mb-1" for="ngay-xuat">Ngày xuất</label>
+        <input id="ngay-xuat" type="date"
+          class="w-full rounded-xl border border-slate-200 bg-paper/60 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+        <p class="mt-3 text-xs text-slate-500">Ngày này ghi vào cột <code>date</code> của mọi dòng khi xuất CSV (định dạng DD-MM-YYYY).</p>
+      </div>
+
+      <div class="lg:col-span-2 bg-white rounded-2xl shadow-card p-5">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-pine-700 mb-3">Nhập thông tin xuất hàng</h2>
+        <div id="selected-empty" class="rounded-xl border border-dashed border-slate-300 bg-paper/50 px-4 py-6 text-center text-sm text-slate-500">
+          Chọn một sản phẩm ở bảng bên dưới để thêm vào phiếu xuất.
+        </div>
+        <form id="form-xuat" class="hidden space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Mã SP</label>
+              <input id="form-masp" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs text-slate-500 mb-1">Tên SP</label>
+              <input id="form-tensp" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Đơn vị</label>
+              <input id="form-donvi" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="form-soluong">Số lượng <span class="text-clay-600">*</span></label>
+              <input id="form-soluong" type="number" min="1" step="1" value="1" required
+                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="form-giaban">Giá bán</label>
+              <input id="form-giaban" type="number" min="0" step="1" value="0"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="form-gianhap">Giá nhập</label>
+              <input id="form-gianhap" type="number" min="0" step="1" value="0"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1" for="form-ghichu">Ghi chú</label>
+            <input id="form-ghichu" type="text" maxlength="200" placeholder="Không bắt buộc"
+              class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="submit"
+              class="inline-flex items-center justify-center gap-2 rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-4 py-2.5 text-sm font-medium shadow-card">
+              Thêm vào phiếu
+            </button>
+            <button type="button" id="btn-bo-chon"
+              class="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm hover:bg-slate-50">
+              Bỏ chọn
+            </button>
+            <p class="text-xs text-slate-500">Giá bán / giá nhập lấy từ sản phẩm, có thể sửa trước khi thêm.</p>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Danh sách sản phẩm -->
+    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex-1">
+          <h2 class="text-base font-semibold text-pine-800">Danh sách sản phẩm</h2>
+          <p id="product-count" class="text-xs text-slate-500 mt-0.5">Chưa tải dữ liệu</p>
+        </div>
+        <div class="relative w-full sm:w-80">
+          <input id="search" type="search" placeholder="Tìm theo Mã SP hoặc Tên SP…"
+            class="w-full rounded-xl border border-slate-200 bg-paper/40 pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
+          </svg>
+        </div>
+      </div>
+      <div id="product-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
+      <div class="overflow-x-auto scroll-thin max-h-[28rem]">
+        <table class="min-w-full text-sm">
+          <thead id="product-head" class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide"></thead>
+          <tbody id="product-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div id="product-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
+        Không tìm thấy sản phẩm phù hợp.
+      </div>
+    </section>
+
+    <!-- Danh sách phiếu xuất -->
+    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex-1">
+          <h2 class="text-base font-semibold text-pine-800">Danh sách phiếu xuất</h2>
+          <p id="phieu-summary" class="text-xs text-slate-500 mt-0.5">Chưa có sản phẩm nào trong phiếu.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-xoa-phieu" type="button"
+            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+            disabled>Xóa phiếu</button>
+          <button id="btn-xuat-csv" type="button"
+            class="rounded-xl bg-clay-500 hover:bg-clay-600 text-white px-4 py-2.5 text-sm font-medium shadow-card disabled:opacity-40"
+            disabled>Xuất file CSV</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto scroll-thin">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600 text-left text-xs uppercase tracking-wide">
+            <tr>
+              <th class="px-4 py-3 font-semibold">#</th>
+              <th class="px-4 py-3 font-semibold">Mã SP</th>
+              <th class="px-4 py-3 font-semibold">Tên SP</th>
+              <th class="px-4 py-3 font-semibold">Đơn vị</th>
+              <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
+              <th class="px-4 py-3 font-semibold">Giá bán</th>
+              <th class="px-4 py-3 font-semibold">Giá nhập</th>
+              <th class="px-4 py-3 font-semibold">Ghi chú</th>
+              <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="phieu-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div id="phieu-empty" class="px-5 py-10 text-center text-sm text-slate-500">
+        Phiếu xuất đang trống. Chọn sản phẩm và nhấn <span class="font-medium text-pine-700">Thêm vào phiếu</span>.
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 pb-10 text-xs text-slate-500">
+    File xuất cùng schema với <code class="bg-white px-1.5 py-0.5 rounded">export-stock.csv</code>
+    để import vào source local. Sản phẩm đọc từ <code class="bg-white px-1.5 py-0.5 rounded">products.csv</code>.
+  </footer>
+
+  <div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[min(22rem,calc(100%-2rem))]"></div>
+
+  <script>
+    /* ========== Trạng thái ========== */
+    const state = {
+      products: [],
+      columns: [],
+      keys: { maSP: null, tenSP: null, donVi: null, giaBan: null, giaNhap: null },
+      selected: null,
+      phieu: [],
+      usedIds: new Set()
+    };
+
+    const COLUMN_LABELS = {
+      id: "Mã SP",
+      masp: "Mã SP",
+      ma_sp: "Mã SP",
+      productid: "Mã SP",
+      name: "Tên SP",
+      tensp: "Tên SP",
+      ten_sp: "Tên SP",
+      productname: "Tên SP",
+      unit: "Đơn vị",
+      donvi: "Đơn vị",
+      don_vi: "Đơn vị",
+      sellingprice: "Giá bán",
+      purchaseprice: "Giá nhập",
+      initstock: "Tồn kho",
+      repackagestock: "Tồn đóng gói",
+      invoicecheck: "Kiểm HĐ",
+      createdat: "Ngày tạo",
+      updatedat: "Ngày cập nhật",
+      note: "Ghi chú",
+      ghichu: "Ghi chú"
+    };
+
+    const KEY_CANDIDATES = {
+      maSP: ["masp", "ma_sp", "id", "productid", "ma"],
+      tenSP: ["tensp", "ten_sp", "name", "productname", "ten"],
+      donVi: ["donvi", "don_vi", "unit", "dvt"],
+      giaBan: ["sellingprice", "giaban", "gia_ban"],
+      giaNhap: ["purchaseprice", "gianhap", "gia_nhap"]
+    };
+
+    /* Header xuất — khớp 100% export-stock.csv */
+    const EXPORT_HEADER = [
+      "id", "date", "productId", "productName",
+      "quantity", "sellingPrice", "purchasePrice",
+      "note", "createdAt", "updatedAt"
+    ];
+
+    const $ = (id) => document.getElementById(id);
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function normalizeHeader(name) {
+      return String(name || "").trim().toLowerCase().replace(/\s+/g, "_");
+    }
+
+    function labelFor(column) {
+      return COLUMN_LABELS[normalizeHeader(column)] || column;
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function toNumber(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function formatCell(value) {
+      const raw = String(value ?? "").trim();
+      if (!raw) return "";
+      if (/^\d{10}$/.test(raw)) {
+        const d = new Date(Number(raw) * 1000);
+        if (!Number.isNaN(d.getTime())) {
+          return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+      }
+      if (/^-?\d+(\.\d+)?$/.test(raw) && raw.length <= 12) {
+        const num = Number(raw);
+        if (Number.isFinite(num) && Math.abs(num) >= 1000) return num.toLocaleString("vi-VN");
+      }
+      return raw;
+    }
+
+    function formatMoney(value) {
+      const n = toNumber(value, 0);
+      return n.toLocaleString("vi-VN");
+    }
+
+    function todayInputValue() {
+      const d = new Date();
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function formatNgayXuat(iso) {
+      if (!iso) return "";
+      const [y, m, d] = iso.split("-");
+      return `${d}-${m}-${y}`;
+    }
+
+    function unixNow() {
+      return Math.floor(Date.now() / 1000);
+    }
+
+    /* ID 13 ký tự hex, cùng kiểu với export-stock.csv (vd. 69562ce817059) */
+    function genLineId() {
+      let id = "";
+      do {
+        id = (Date.now().toString(16) + Math.random().toString(16).slice(2, 10)).slice(0, 13);
+      } while (state.usedIds.has(id));
+      state.usedIds.add(id);
+      return id;
+    }
+
+    /* ========== Toast ========== */
+    function toast(message, type) {
+      const colors = {
+        success: "bg-pine-800 text-white",
+        error: "bg-red-600 text-white",
+        info: "bg-slate-800 text-white",
+        warning: "bg-amber-500 text-ink"
+      };
+      const el = document.createElement("div");
+      el.className = `toast-enter rounded-xl px-4 py-3 text-sm shadow-lift ${colors[type] || colors.info}`;
+      el.textContent = message;
+      $("toasts").appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transition = "opacity .25s";
+        setTimeout(() => el.remove(), 250);
+      }, 3200);
+    }
+
+    function setStatus(text, tone) {
+      const dot = tone === "ok"
+        ? "bg-emerald-400"
+        : tone === "err"
+          ? "bg-red-400"
+          : "bg-amber-300 animate-pulse";
+      $("status-chip").innerHTML = `<span class="h-2 w-2 rounded-full ${dot}"></span>${escapeHtml(text)}`;
+    }
+
+    /* ========== Parse CSV (quoted fields, BOM, CRLF) ========== */
+    function parseCSV(text) {
+      if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i + 1];
+        if (inQuotes) {
+          if (c === '"') {
+            if (next === '"') { field += '"'; i++; }
+            else inQuotes = false;
+          } else {
+            field += c;
+          }
+        } else if (c === '"') {
+          inQuotes = true;
+        } else if (c === ",") {
+          row.push(field);
+          field = "";
+        } else if (c === "\n" || c === "\r") {
+          if (c === "\r" && next === "\n") i++;
+          row.push(field);
+          if (row.some((cell) => String(cell).trim() !== "")) rows.push(row);
+          row = [];
+          field = "";
+        } else {
+          field += c;
+        }
+      }
+      if (field.length || row.length) {
+        row.push(field);
+        if (row.some((cell) => String(cell).trim() !== "")) rows.push(row);
+      }
+      return rows;
+    }
+
+    function rowsToObjects(rows) {
+      if (!rows.length) return { columns: [], products: [] };
+      const columns = rows[0].map((h) => String(h).trim());
+      const products = rows.slice(1).map((cells, index) => {
+        const item = { __index: index };
+        columns.forEach((col, i) => {
+          item[col] = cells[i] != null ? String(cells[i]).trim() : "";
+        });
+        return item;
+      });
+      return { columns, products };
+    }
+
+    function detectKeys(columns) {
+      const normalized = columns.map((c) => ({ raw: c, norm: normalizeHeader(c) }));
+      const pick = (candidates) => {
+        const found = normalized.find((c) => candidates.includes(c.norm));
+        return found ? found.raw : null;
+      };
+      return {
+        maSP: pick(KEY_CANDIDATES.maSP),
+        tenSP: pick(KEY_CANDIDATES.tenSP),
+        donVi: pick(KEY_CANDIDATES.donVi),
+        giaBan: pick(KEY_CANDIDATES.giaBan),
+        giaNhap: pick(KEY_CANDIDATES.giaNhap)
+      };
+    }
+
+    function getField(product, keyName) {
+      const col = state.keys[keyName];
+      return col ? (product[col] || "") : "";
+    }
+
+    /* ========== Tải products.csv, fallback product.csv ========== */
+    async function loadProducts() {
+      const files = ["products.csv", "product.csv"];
+      let lastError = "";
+
+      for (const file of files) {
+        try {
+          const res = await fetch(file + "?t=" + Date.now(), { cache: "no-store" });
+          if (!res.ok) {
+            lastError = `Không đọc được ${file} (HTTP ${res.status}).`;
+            continue;
+          }
+          const text = await res.text();
+          if (!text.trim()) {
+            lastError = `File ${file} đang trống.`;
+            continue;
+          }
+          const { columns, products } = rowsToObjects(parseCSV(text));
+          if (!columns.length || !products.length) {
+            lastError = `File ${file} không có dữ liệu sản phẩm.`;
+            continue;
+          }
+          state.columns = columns;
+          state.products = products;
+          state.keys = detectKeys(columns);
+          if (!state.keys.maSP || !state.keys.tenSP) {
+            lastError = `File ${file} thiếu cột Mã SP hoặc Tên SP.`;
+            continue;
+          }
+          renderProductHead();
+          renderProducts();
+          setStatus(`${products.length} sản phẩm · ${file}`, "ok");
+          $("product-count").textContent = `Đã tải ${products.length} sản phẩm từ ${file}`;
+          $("product-error").classList.add("hidden");
+          toast(`Đã tải ${products.length} sản phẩm từ ${file}`, "success");
+          return;
+        } catch (err) {
+          lastError = `Lỗi khi tải ${file}: ${err.message}`;
+        }
+      }
+
+      const hint = "Hãy mở trang bằng Live Server hoặc GitHub Pages và đặt file products.csv cùng thư mục với index.html.";
+      $("product-error").textContent = (lastError || "Không tải được danh sách sản phẩm.") + " " + hint;
+      $("product-error").classList.remove("hidden");
+      $("product-count").textContent = "Tải dữ liệu thất bại";
+      setStatus("Lỗi tải sản phẩm", "err");
+      toast("Không tải được products.csv", "error");
+    }
+
+    /* ========== Bảng sản phẩm ========== */
+    function orderedColumns() {
+      const priority = [
+        state.keys.maSP, state.keys.tenSP, state.keys.donVi,
+        state.keys.giaBan, state.keys.giaNhap
+      ].filter(Boolean);
+      const rest = state.columns.filter((c) => !priority.includes(c));
+      return [...priority, ...rest];
+    }
+
+    function renderProductHead() {
+      const cols = orderedColumns();
+      $("product-head").innerHTML = `<tr>${
+        cols.map((c) => `<th class="px-4 py-3 font-semibold whitespace-nowrap">${escapeHtml(labelFor(c))}</th>`).join("")
+      }</tr>`;
+    }
+
+    function renderProducts() {
+      const keyword = $("search").value.trim().toLowerCase();
+      const cols = orderedColumns();
+      const maCol = state.keys.maSP;
+      const tenCol = state.keys.tenSP;
+      const selectedId = state.selected ? getField(state.selected, "maSP") : "";
+
+      const filtered = state.products.filter((p) => {
+        if (!keyword) return true;
+        const ma = String(p[maCol] || "").toLowerCase();
+        const ten = String(p[tenCol] || "").toLowerCase();
+        return ma.includes(keyword) || ten.includes(keyword);
+      });
+
+      $("product-count").textContent = keyword
+        ? `Hiển thị ${filtered.length} / ${state.products.length} sản phẩm`
+        : `Đã tải ${state.products.length} sản phẩm`;
+
+      $("product-empty").classList.toggle("hidden", filtered.length > 0 || !state.products.length);
+      $("product-body").innerHTML = filtered.map((p) => {
+        const ma = getField(p, "maSP");
+        const active = selectedId && ma === selectedId;
+        const cells = cols.map((c) =>
+          `<td class="px-4 py-2.5 whitespace-nowrap ${c === tenCol ? "font-medium text-ink" : "text-slate-600"}">${escapeHtml(formatCell(p[c]))}</td>`
+        ).join("");
+        return `<tr data-masp="${escapeHtml(ma)}" class="cursor-pointer hover:bg-pine-50 ${active ? "bg-pine-100" : ""}">${cells}</tr>`;
+      }).join("");
+    }
+
+    function findProductByMa(maSP) {
+      const col = state.keys.maSP;
+      return state.products.find((p) => String(p[col]) === String(maSP));
+    }
+
+    function selectProduct(product) {
+      state.selected = product;
+      $("selected-empty").classList.add("hidden");
+      $("form-xuat").classList.remove("hidden");
+      $("form-masp").value = getField(product, "maSP");
+      $("form-tensp").value = getField(product, "tenSP");
+      $("form-donvi").value = getField(product, "donVi") || "—";
+      $("form-soluong").value = 1;
+      $("form-giaban").value = toNumber(getField(product, "giaBan"), 0);
+      $("form-gianhap").value = toNumber(getField(product, "giaNhap"), 0);
+      $("form-ghichu").value = "";
+      renderProducts();
+      $("form-soluong").focus();
+      $("form-soluong").select();
+    }
+
+    function clearSelection() {
+      state.selected = null;
+      $("form-xuat").classList.add("hidden");
+      $("selected-empty").classList.remove("hidden");
+      renderProducts();
+    }
+
+    /* ========== Phiếu xuất ========== */
+    function addToPhieu(payload) {
+      const soLuong = Number(payload.soLuong);
+      const giaBan = toNumber(payload.giaBan, 0);
+      const giaNhap = toNumber(payload.giaNhap, 0);
+      if (!payload.maSP || !payload.tenSP) {
+        toast("Chưa chọn sản phẩm hợp lệ.", "error");
+        return false;
+      }
+      if (!Number.isFinite(soLuong) || soLuong <= 0) {
+        toast("Số lượng phải lớn hơn 0.", "error");
+        return false;
+      }
+      if (giaBan < 0 || giaNhap < 0) {
+        toast("Giá không được âm.", "error");
+        return false;
+      }
+      const now = unixNow();
+      state.phieu.push({
+        id: genLineId(),
+        productId: payload.maSP,
+        productName: payload.tenSP,
+        donVi: payload.donVi || "",
+        quantity: soLuong,
+        sellingPrice: giaBan,
+        purchasePrice: giaNhap,
+        note: (payload.ghiChu || "").trim(),
+        createdAt: now,
+        updatedAt: now
+      });
+      renderPhieu();
+      toast(`Đã thêm ${payload.tenSP} (SL ${soLuong})`, "success");
+      return true;
+    }
+
+    function renderPhieu() {
+      const hasRows = state.phieu.length > 0;
+      $("phieu-empty").classList.toggle("hidden", hasRows);
+      $("btn-xuat-csv").disabled = !hasRows;
+      $("btn-xoa-phieu").disabled = !hasRows;
+
+      const tongSL = state.phieu.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+      $("phieu-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
+      $("phieu-summary").textContent = hasRows
+        ? `${state.phieu.length} dòng · Tổng số lượng ${tongSL.toLocaleString("vi-VN")}`
+        : "Chưa có sản phẩm nào trong phiếu.";
+
+      $("phieu-body").innerHTML = state.phieu.map((row, idx) => `
+        <tr data-id="${escapeHtml(row.id)}">
+          <td class="px-4 py-2.5 text-slate-500">${idx + 1}</td>
+          <td class="px-4 py-2.5 whitespace-nowrap">${escapeHtml(row.productId)}</td>
+          <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName)}</td>
+          <td class="px-4 py-2.5">${escapeHtml(row.donVi || "—")}</td>
+          <td class="px-4 py-2.5">
+            <input type="number" min="1" step="1" value="${escapeHtml(row.quantity)}"
+              data-action="qty"
+              class="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </td>
+          <td class="px-4 py-2.5 whitespace-nowrap">${escapeHtml(formatMoney(row.sellingPrice))}</td>
+          <td class="px-4 py-2.5 whitespace-nowrap">${escapeHtml(formatMoney(row.purchasePrice))}</td>
+          <td class="px-4 py-2.5 text-slate-600">${escapeHtml(row.note || "—")}</td>
+          <td class="px-4 py-2.5 text-right">
+            <button type="button" data-action="delete"
+              class="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Xóa</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function updateQuantity(id, value) {
+      const row = state.phieu.find((r) => r.id === id);
+      if (!row) return;
+      const soLuong = Number(value);
+      if (!Number.isFinite(soLuong) || soLuong <= 0) {
+        toast("Số lượng phải lớn hơn 0.", "warning");
+        renderPhieu();
+        return;
+      }
+      row.quantity = soLuong;
+      row.updatedAt = unixNow();
+      const tongSL = state.phieu.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
+      $("phieu-summary").textContent = `${state.phieu.length} dòng · Tổng số lượng ${tongSL.toLocaleString("vi-VN")}`;
+    }
+
+    function removeRow(id) {
+      const row = state.phieu.find((r) => r.id === id);
+      state.phieu = state.phieu.filter((r) => r.id !== id);
+      renderPhieu();
+      toast(row ? `Đã xóa ${row.productName}` : "Đã xóa dòng", "info");
+    }
+
+    /* ========== Xuất CSV — schema export-stock.csv, UTF-8 BOM ========== */
+    function csvEscape(value) {
+      const s = String(value ?? "");
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    }
+
+    function exportCSV() {
+      if (!state.phieu.length) {
+        toast("Phiếu xuất đang trống, không thể xuất file.", "error");
+        return;
+      }
+      const ngayIso = $("ngay-xuat").value;
+      if (!ngayIso) {
+        toast("Vui lòng chọn ngày xuất.", "error");
+        return;
+      }
+      const date = formatNgayXuat(ngayIso);
+      const now = unixNow();
+      const lines = [EXPORT_HEADER.map(csvEscape).join(",")];
+
+      state.phieu.forEach((row) => {
+        lines.push([
+          row.id,
+          date,
+          row.productId,
+          row.productName,
+          row.quantity,
+          row.sellingPrice,
+          row.purchasePrice,
+          row.note,
+          row.createdAt,
+          row.updatedAt || now
+        ].map(csvEscape).join(","));
+      });
+
+      const stampDate = new Date();
+      const stamp = `${stampDate.getFullYear()}${pad(stampDate.getMonth() + 1)}${pad(stampDate.getDate())}_${pad(stampDate.getHours())}${pad(stampDate.getMinutes())}${pad(stampDate.getSeconds())}`;
+      const filename = `PhieuXuat_${stamp}.csv`;
+      const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Đã xuất ${filename}`, "success");
+    }
+
+    /* ========== Sự kiện ========== */
+    $("search").addEventListener("input", renderProducts);
+
+    $("product-body").addEventListener("click", (e) => {
+      const tr = e.target.closest("tr[data-masp]");
+      if (!tr) return;
+      const product = findProductByMa(tr.getAttribute("data-masp"));
+      if (product) selectProduct(product);
+    });
+
+    $("form-xuat").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!state.selected) {
+        toast("Hãy chọn sản phẩm trước.", "error");
+        return;
+      }
+      const ok = addToPhieu({
+        maSP: getField(state.selected, "maSP"),
+        tenSP: getField(state.selected, "tenSP"),
+        donVi: getField(state.selected, "donVi"),
+        soLuong: $("form-soluong").value,
+        giaBan: $("form-giaban").value,
+        giaNhap: $("form-gianhap").value,
+        ghiChu: $("form-ghichu").value
+      });
+      if (ok) {
+        $("form-soluong").value = 1;
+        $("form-ghichu").value = "";
+        $("form-soluong").focus();
+      }
+    });
+
+    $("btn-bo-chon").addEventListener("click", clearSelection);
+
+    $("phieu-body").addEventListener("change", (e) => {
+      const tr = e.target.closest("tr[data-id]");
+      if (!tr || e.target.getAttribute("data-action") !== "qty") return;
+      updateQuantity(tr.getAttribute("data-id"), e.target.value);
+    });
+
+    $("phieu-body").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='delete']");
+      if (!btn) return;
+      const tr = btn.closest("tr[data-id]");
+      if (tr) removeRow(tr.getAttribute("data-id"));
+    });
+
+    $("btn-xuat-csv").addEventListener("click", exportCSV);
+
+    $("btn-xoa-phieu").addEventListener("click", () => {
+      if (!state.phieu.length) return;
+      if (confirm("Xóa toàn bộ sản phẩm trong phiếu xuất hiện tại?")) {
+        state.phieu = [];
+        renderPhieu();
+        toast("Đã xóa toàn bộ phiếu xuất.", "info");
+      }
+    });
+
+    $("ngay-xuat").value = todayInputValue();
+    renderPhieu();
+    loadProducts();
+  </script>
+</body>
+</html>
