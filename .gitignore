@@ -3,3 +3,6 @@
 
 # Apps Script source (deploy riêng trên Google)
 apps-script/
+
+# Dữ liệu xuất hàng local
+export-stock.csv
