@@ -169,7 +169,7 @@
         Không tìm thấy sản phẩm phù hợp.
       </div>
       <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">
-        Double-click vào dòng để thêm vào phiếu xuất.
+        Nhấn nút <span class="font-medium text-pine-700">+</span> để thêm sản phẩm vào phiếu xuất.
       </div>
     </section>
 
@@ -224,7 +224,7 @@
       <!-- Mobile card list -->
       <div id="phieu-cards" class="sm:hidden divide-y divide-slate-100"></div>
       <div id="phieu-empty" class="px-5 py-10 text-center text-sm text-slate-500">
-        Phiếu xuất đang trống. Double-click vào sản phẩm để thêm vào phiếu.
+        Phiếu xuất đang trống.
       </div>
     </section>
 
@@ -389,11 +389,6 @@
       </div>
     </div>
   </main>
-
-  <footer class="max-w-7xl mx-auto px-4 sm:px-6 pb-10 text-xs text-slate-500">
-    File xuất cùng schema với <code class="bg-white px-1.5 py-0.5 rounded">export-stock.csv</code>
-    để import vào source local. Sản phẩm đọc từ <code class="bg-white px-1.5 py-0.5 rounded">products.csv</code>.
-  </footer>
 
   <div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[min(22rem,calc(100%-2rem))]"></div>
 
@@ -686,7 +681,7 @@
       const cols = orderedColumns();
       $("product-head").innerHTML = `<tr>${
         cols.map((c) => `<th class="px-4 py-3 font-semibold whitespace-nowrap">${escapeHtml(labelFor(c))}</th>`).join("")
-      }</tr>`;
+      }<th class="px-3 py-3"></th></tr>`;
     }
 
     function renderProducts() {
@@ -711,12 +706,18 @@
 
       // Desktop: bảng
       $("product-body").innerHTML = filtered.map((p) => {
-        const ma = getField(p, "maSP");
+        const ma      = getField(p, "maSP");
         const inPhieu = state.phieu.some((r) => r.productId === ma);
-        const cells = cols.map((c) =>
+        const cells   = cols.map((c) =>
           `<td class="px-4 py-2.5 whitespace-nowrap ${c === tenCol ? "font-medium text-ink" : "text-slate-600"}">${escapeHtml(formatCell(p[c]))}</td>`
         ).join("");
-        return `<tr data-masp="${escapeHtml(ma)}" class="cursor-pointer select-none hover:bg-pine-50 ${inPhieu ? "bg-pine-50 ring-1 ring-inset ring-pine-200" : ""}">${cells}</tr>`;
+        return `<tr data-masp="${escapeHtml(ma)}" class="hover:bg-pine-50 ${inPhieu ? "bg-pine-50 ring-1 ring-inset ring-pine-200" : ""}">
+          ${cells}
+          <td class="px-3 py-2">
+            <button type="button" data-action="add-to-phieu" data-masp="${escapeHtml(ma)}"
+              class="rounded-lg w-8 h-8 flex items-center justify-center bg-pine-700 hover:bg-pine-800 text-white text-lg font-bold leading-none">+</button>
+          </td>
+        </tr>`;
       }).join("");
 
       // Mobile: card list
@@ -727,15 +728,15 @@
         const giaBan  = getField(p, "giaBan");
         const inPhieu = state.phieu.some((r) => r.productId === ma);
         return `
-          <div data-masp="${escapeHtml(ma)}"
-            class="product-card flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 active:bg-pine-50 cursor-pointer select-none ${inPhieu ? "bg-pine-50" : ""}">
+          <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 ${inPhieu ? "bg-pine-50" : ""}">
             <div class="flex-1 min-w-0">
               <p class="font-medium text-sm truncate">${escapeHtml(ten)}</p>
               <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(ma)} · ${escapeHtml(donVi || "—")}</p>
             </div>
-            <div class="text-right shrink-0">
+            <div class="flex items-center gap-3 shrink-0">
               <p class="text-sm font-semibold text-pine-700">${giaBan ? Number(giaBan).toLocaleString("vi-VN") : "—"}</p>
-              ${inPhieu ? `<span class="text-xs text-pine-600">✓ Đã thêm</span>` : `<span class="text-xs text-slate-400">Nhấn 2× để thêm</span>`}
+              <button type="button" data-action="add-to-phieu" data-masp="${escapeHtml(ma)}"
+                class="rounded-lg w-9 h-9 flex items-center justify-center bg-pine-700 hover:bg-pine-800 text-white text-xl font-bold leading-none">+</button>
             </div>
           </div>`;
       }).join("");
@@ -1219,11 +1220,8 @@
           body: JSON.stringify({ action: "delete", ids })
         });
         toast(`Đã xóa ${ids.length} dòng.`, "success");
-        // Xóa optimistic khỏi local state luôn
-        sheetHistory = sheetHistory.filter((r) => !historySelected.has(r.id));
         historySelected.clear();
-        renderHistory();
-        renderStats();
+        await loadSheetHistory();
       } catch (err) {
         toast("Lỗi khi xóa: " + err.message, "error");
       } finally {
@@ -1309,7 +1307,7 @@
         }
         toast("Đã cập nhật thành công.", "success");
         closeEditModal();
-        renderHistory();
+        await loadSheetHistory();
       } catch (err) {
         toast("Lỗi khi lưu: " + err.message, "error");
       } finally {
@@ -1352,18 +1350,14 @@
     /* ========== Sự kiện ========== */
     $("search").addEventListener("input", renderProducts);
 
-    $("product-body").addEventListener("dblclick", (e) => {
-      const tr = e.target.closest("tr[data-masp]");
-      if (!tr) return;
-      const product = findProductByMa(tr.getAttribute("data-masp"));
-      if (product) addToPhieu(product);
-    });
-
-    $("product-cards").addEventListener("dblclick", (e) => {
-      const card = e.target.closest("[data-masp]");
-      if (!card) return;
-      const product = findProductByMa(card.getAttribute("data-masp"));
-      if (product) addToPhieu(product);
+    // Nút "+" thêm vào phiếu — dùng event delegation cho cả desktop và mobile
+    ["product-body", "product-cards"].forEach((id) => {
+      $(id).addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action='add-to-phieu']");
+        if (!btn) return;
+        const product = findProductByMa(btn.getAttribute("data-masp"));
+        if (product) addToPhieu(product);
+      });
     });
 
     $("phieu-body").addEventListener("change", (e) => {
