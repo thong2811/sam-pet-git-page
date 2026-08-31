@@ -45,7 +45,9 @@
   </script>
   <style>
     html { scroll-behavior: smooth; }
-    body { font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif; }
+    body { font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif; overscroll-behavior-y: none; }
+    /* Chặn double-tap zoom trên nút tăng giảm số lượng */
+    [data-action="qty-inc"], [data-action="qty-dec"] { touch-action: manipulation; }
     .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
     .scroll-thin::-webkit-scrollbar-thumb { background: #b7cfc8; border-radius: 99px; }
     .scroll-thin::-webkit-scrollbar-track { background: transparent; }
@@ -705,13 +707,14 @@
       $("product-empty").classList.toggle("hidden", filtered.length > 0 || !state.products.length);
 
       // Desktop: bảng
-      $("product-body").innerHTML = filtered.map((p) => {
+      $("product-body").innerHTML = filtered.map((p, idx) => {
         const ma      = getField(p, "maSP");
         const inPhieu = state.phieu.some((r) => r.productId === ma);
         const cells   = cols.map((c) =>
           `<td class="px-4 py-2.5 whitespace-nowrap ${c === tenCol ? "font-medium text-ink" : "text-slate-600"}">${escapeHtml(formatCell(p[c]))}</td>`
         ).join("");
-        return `<tr data-masp="${escapeHtml(ma)}" class="hover:bg-pine-50 ${inPhieu ? "bg-pine-50 ring-1 ring-inset ring-pine-200" : ""}">
+        const rowBg = inPhieu ? "bg-pine-100 ring-1 ring-inset ring-pine-300" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
+        return `<tr data-masp="${escapeHtml(ma)}" class="hover:bg-pine-100 ${rowBg}">
           ${cells}
           <td class="px-3 py-2">
             <button type="button" data-action="add-to-phieu" data-masp="${escapeHtml(ma)}"
@@ -721,14 +724,15 @@
       }).join("");
 
       // Mobile: card list
-      $("product-cards").innerHTML = filtered.map((p) => {
+      $("product-cards").innerHTML = filtered.map((p, idx) => {
         const ma      = getField(p, "maSP");
         const ten     = getField(p, "tenSP");
         const donVi   = getField(p, "donVi");
         const giaBan  = getField(p, "giaBan");
         const inPhieu = state.phieu.some((r) => r.productId === ma);
+        const cardBg  = inPhieu ? "bg-pine-100" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
         return `
-          <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 ${inPhieu ? "bg-pine-50" : ""}">
+          <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 ${cardBg}">
             <div class="flex-1 min-w-0">
               <p class="font-medium text-sm truncate">${escapeHtml(ten)}</p>
               <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(ma)} · ${escapeHtml(donVi || "—")}</p>
@@ -787,7 +791,7 @@
         : "Chưa có sản phẩm nào trong phiếu.";
 
       $("phieu-body").innerHTML = state.phieu.map((row, idx) => `
-        <tr data-id="${escapeHtml(row.id)}">
+        <tr data-id="${escapeHtml(row.id)}" class="${idx % 2 === 0 ? "bg-white" : "bg-slate-100/60"}">
           <td class="px-4 py-2.5 text-slate-400 text-xs">${idx + 1}</td>
           <td class="px-4 py-2.5 whitespace-nowrap font-mono text-xs">${escapeHtml(row.productId)}</td>
           <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName)}</td>
@@ -798,9 +802,15 @@
               class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
           </td>
           <td class="px-4 py-2.5">
-            <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
-              data-action="qty"
-              class="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <div class="flex items-center gap-1">
+              <button type="button" data-action="qty-dec"
+                class="w-7 h-7 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-base flex items-center justify-center">−</button>
+              <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
+                data-action="qty"
+                class="w-14 rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pine-500" />
+              <button type="button" data-action="qty-inc"
+                class="w-7 h-7 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-base flex items-center justify-center">+</button>
+            </div>
           </td>
           <td class="px-4 py-2.5">
             <input type="number" min="0" step="1" value="${escapeHtml(String(row.sellingPrice))}"
@@ -821,7 +831,7 @@
 
       // Mobile cards
       $("phieu-cards").innerHTML = state.phieu.map((row, idx) => `
-        <div data-id="${escapeHtml(row.id)}" class="px-4 py-3 space-y-2">
+        <div data-id="${escapeHtml(row.id)}" class="px-4 py-3 space-y-2 border-b border-slate-100 ${idx % 2 === 0 ? "bg-white" : "bg-slate-100/60"}">
           <div class="flex items-start justify-between gap-2">
             <div>
               <p class="font-medium text-sm">${escapeHtml(row.productName)}</p>
@@ -830,25 +840,36 @@
             <button type="button" data-action="delete"
               class="shrink-0 rounded-lg px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 border border-red-100">Xóa</button>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Ngày xuất</label>
-              <input type="date" value="${escapeHtml(row.date || todayInputValue())}"
-                data-action="date"
-                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-            </div>
+          <div class="space-y-2">
+            <!-- Số lượng — hàng riêng, nút to -->
             <div>
               <label class="block text-xs text-slate-400 mb-1">Số lượng</label>
-              <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
-                data-action="qty"
-                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+              <div class="flex items-center gap-2">
+                <button type="button" data-action="qty-dec"
+                  class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xl flex items-center justify-center">−</button>
+                <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
+                  data-action="qty"
+                  class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-base text-center font-semibold focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                <button type="button" data-action="qty-inc"
+                  class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xl flex items-center justify-center">+</button>
+              </div>
             </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Giá bán</label>
-              <input type="number" min="0" step="1" value="${escapeHtml(String(row.sellingPrice))}"
-                data-action="price"
-                class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <!-- Ngày + Giá bán cùng hàng -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Ngày xuất</label>
+                <input type="date" value="${escapeHtml(row.date || todayInputValue())}"
+                  data-action="date"
+                  class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Giá bán</label>
+                <input type="number" min="0" step="1" value="${escapeHtml(String(row.sellingPrice))}"
+                  data-action="price"
+                  class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+              </div>
             </div>
+            <!-- Ghi chú full width -->
             <div>
               <label class="block text-xs text-slate-400 mb-1">Ghi chú</label>
               <input type="text" maxlength="200" value="${escapeHtml(row.note || "")}"
@@ -1114,8 +1135,9 @@
 
       $("history-body").innerHTML = filtered.map((row, idx) => {
         const checked = historySelected.has(row.id) ? "checked" : "";
+        const rowBg = historySelected.has(row.id) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
         return `
-          <tr data-rowid="${escapeHtml(row.id)}" class="hover:bg-pine-50 ${historySelected.has(row.id) ? "bg-pine-50" : ""}">
+          <tr data-rowid="${escapeHtml(row.id)}" class="hover:bg-pine-50 ${rowBg}">
             <td class="px-3 py-2.5">
               <input type="checkbox" data-action="rowcheck" value="${escapeHtml(row.id)}" ${checked} class="rounded" />
             </td>
@@ -1134,11 +1156,11 @@
       }).join("");
 
       // Mobile cards
-      $("history-cards").innerHTML = filtered.map((row) => {
+      $("history-cards").innerHTML = filtered.map((row, idx) => {
         const checked = historySelected.has(row.id) ? "checked" : "";
-        const selBg   = historySelected.has(row.id) ? "bg-pine-50" : "";
+        const cardBg = historySelected.has(row.id) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
         return `
-          <div class="px-4 py-3 space-y-1.5 ${selBg}">
+          <div class="px-4 py-3 space-y-1.5 ${cardBg}">
             <div class="flex items-start justify-between gap-2">
               <label class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
                 <input type="checkbox" data-action="rowcheck" value="${escapeHtml(row.id)}" ${checked} class="rounded shrink-0" />
@@ -1360,41 +1382,43 @@
       });
     });
 
-    $("phieu-body").addEventListener("change", (e) => {
-      const tr = e.target.closest("tr[data-id]");
-      if (!tr) return;
-      const action = e.target.getAttribute("data-action");
-      const id = tr.getAttribute("data-id");
-      if (action === "qty")   updatePhieuField(id, "qty",   e.target.value);
-      if (action === "price") updatePhieuField(id, "price", e.target.value);
-      if (action === "note")  updatePhieuField(id, "note",  e.target.value);
-      if (action === "date")  updatePhieuField(id, "date",  e.target.value);
-    });
+    function attachPhieuClickEvents(containerId, rowSelector) {
+      $(containerId).addEventListener("click", (e) => {
+        const row = e.target.closest(rowSelector);
+        if (!row) return;
+        const id = row.getAttribute("data-id");
+        const action = e.target.closest("[data-action]")?.getAttribute("data-action");
+        if (action === "delete") { removeRow(id); return; }
+        if (action === "qty-inc" || action === "qty-dec") {
+          const phieuRow = state.phieu.find((r) => r.id === id);
+          if (!phieuRow) return;
+          const delta = action === "qty-inc" ? 1 : -1;
+          const newQty = Number(phieuRow.quantity) + delta;
+          if (newQty < 1) return;
+          updatePhieuField(id, "qty", newQty);
+          // Cập nhật giá trị input trực tiếp không re-render toàn bộ
+          const input = row.querySelector("[data-action='qty']");
+          if (input) input.value = newQty;
+        }
+      });
+    }
+    function attachPhieuChangeEvents(containerId, rowSelector) {
+      $(containerId).addEventListener("change", (e) => {
+        const row = e.target.closest(rowSelector);
+        if (!row) return;
+        const action = e.target.getAttribute("data-action");
+        const id = row.getAttribute("data-id");
+        if (action === "qty")   updatePhieuField(id, "qty",   e.target.value);
+        if (action === "price") updatePhieuField(id, "price", e.target.value);
+        if (action === "note")  updatePhieuField(id, "note",  e.target.value);
+        if (action === "date")  updatePhieuField(id, "date",  e.target.value);
+      });
+    }
 
-    $("phieu-body").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-action='delete']");
-      if (!btn) return;
-      const tr = btn.closest("tr[data-id]");
-      if (tr) removeRow(tr.getAttribute("data-id"));
-    });
-
-    $("phieu-cards").addEventListener("change", (e) => {
-      const card = e.target.closest("[data-id]");
-      if (!card) return;
-      const action = e.target.getAttribute("data-action");
-      const id = card.getAttribute("data-id");
-      if (action === "qty")   updatePhieuField(id, "qty",   e.target.value);
-      if (action === "price") updatePhieuField(id, "price", e.target.value);
-      if (action === "note")  updatePhieuField(id, "note",  e.target.value);
-      if (action === "date")  updatePhieuField(id, "date",  e.target.value);
-    });
-
-    $("phieu-cards").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-action='delete']");
-      if (!btn) return;
-      const card = btn.closest("[data-id]");
-      if (card) removeRow(card.getAttribute("data-id"));
-    });
+    attachPhieuChangeEvents("phieu-body",  "tr[data-id]");
+    attachPhieuChangeEvents("phieu-cards", "[data-id]");
+    attachPhieuClickEvents("phieu-body",   "tr[data-id]");
+    attachPhieuClickEvents("phieu-cards",  "[data-id]");
 
     $("btn-apply-date").addEventListener("click", () => {
       const val = $("ngay-xuat").value;
