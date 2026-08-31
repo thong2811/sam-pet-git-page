@@ -1214,7 +1214,14 @@
         sheetHistory = (data.rows || []).map((r) => {
           r.date = normalizeDateVN(r.date);
           return r;
-        }).reverse();
+        }).sort((a, b) => {
+          // Chuyển DD-MM-YYYY → YYYY-MM-DD để so sánh chuỗi đúng thứ tự
+          const toYMD = (s) => {
+            const p = (s || "").split("-");
+            return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s;
+          };
+          return toYMD(b.date).localeCompare(toYMD(a.date));
+        });
         historySelected.clear();
         renderHistory();
         renderStats();
