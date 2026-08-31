@@ -1545,8 +1545,11 @@
       const ptrIcon = document.getElementById("ptr-icon");
 
       document.addEventListener("touchstart", (e) => {
-        if (window.scrollY === 0 && !isReloading) {
+        // Không trigger nếu đang chạm vào scrollable container bên trong
+        const scrollable = e.target.closest(".scroll-thin, .overflow-x-auto, .overflow-y-auto");
+        if (window.scrollY === 0 && !isReloading && !scrollable) {
           startY = e.touches[0].clientY;
+          maxDist = 0;
           pulling = true;
         }
       }, { passive: true });
@@ -1554,6 +1557,7 @@
       document.addEventListener("touchmove", (e) => {
         if (!pulling || isReloading) return;
         const dist = e.touches[0].clientY - startY;
+        if (dist > maxDist) maxDist = dist;
         if (dist > 10) {
           ptr.classList.add("ptr-ready");
           ptrText.textContent = dist >= THRESHOLD ? "Thả để tải lại" : "Kéo xuống để tải lại";
@@ -1566,16 +1570,18 @@
         if (!pulling || isReloading) return;
         pulling = false;
         ptr.classList.remove("ptr-ready");
-        const dist = e.changedTouches[0].clientY - startY;
-        if (dist >= THRESHOLD) {
+        if (maxDist >= THRESHOLD) {
           isReloading = true;
-          $("splash").classList.remove("hidden");
-          setTimeout(() => window.location.reload(), 400);
+          ptr.classList.add("ptr-loading");
+          ptrText.textContent = "Đang tải lại…";
+          ptrIcon.classList.add("ptr-spinner");
+          setTimeout(() => window.location.reload(), 500);
         }
       }, { passive: true });
 
       document.addEventListener("touchcancel", () => {
         pulling = false;
+        maxDist = 0;
         ptr.classList.remove("ptr-ready");
       }, { passive: true });
     }
