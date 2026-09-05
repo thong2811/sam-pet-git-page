@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>SamPet — Phiếu xuất hàng</title>
+  <title>SamPet — Quản lý Xuất & Chiết hàng</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -46,7 +46,6 @@
   <style>
     html { scroll-behavior: smooth; }
     body { font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif; overscroll-behavior-y: none; }
-    /* Chặn double-tap zoom trên nút tăng giảm số lượng */
     [data-action="qty-inc"], [data-action="qty-dec"] { touch-action: manipulation; }
     .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
     .scroll-thin::-webkit-scrollbar-thumb { background: #b7cfc8; border-radius: 99px; }
@@ -119,23 +118,47 @@
     </svg>
     <span id="ptr-text">Kéo xuống để tải lại</span>
   </div>
-  <header class="bg-pine-900 text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+  <header class="bg-pine-900 text-white sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div class="flex items-center gap-3">
-        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl shadow-lift overflow-hidden">
+        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl shadow-lift overflow-hidden shrink-0">
           <img src="icons/apple-touch-icon.png" alt="SamPet logo" class="h-11 w-11 object-cover" />
         </span>
         <div>
-          <p class="text-xs uppercase tracking-[0.18em] text-pine-100/80">Sam pet</p>
-          <h1 class="text-xl sm:text-2xl font-semibold leading-tight">Phiếu xuất hàng hàng ngày</h1>
+          <div class="flex items-center gap-2">
+            <p class="text-xs uppercase tracking-[0.18em] text-pine-100/80 font-medium">Sam Pet</p>
+            <span class="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono text-pine-100">v2.0</span>
+          </div>
+          <h1 id="header-title" class="text-lg sm:text-xl font-semibold leading-tight">Phiếu xuất hàng hàng ngày</h1>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-2 text-sm">
+
+      <!-- Tab Switcher -->
+      <div class="flex items-center bg-black/25 p-1 rounded-xl border border-white/10 self-start sm:self-auto">
+        <button id="tab-btn-xuat" type="button"
+          class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white text-pine-900 shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Xuất Hàng
+        </button>
+        <button id="tab-btn-chiet" type="button"
+          class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-white/80 hover:text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          Chiết Hàng
+        </button>
+      </div>
+
+      <!-- Status chips -->
+      <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
         <span id="status-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
           <span class="h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
           Đang tải sản phẩm…
         </span>
-        <span id="phieu-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+        <span id="badge-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
           Phiếu: 0 dòng
         </span>
       </div>
@@ -143,197 +166,446 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-    <!-- Danh sách sản phẩm -->
-    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div class="flex-1">
-          <h2 class="text-base font-semibold text-pine-800">Danh sách sản phẩm</h2>
-          <p id="product-count" class="text-xs text-slate-500 mt-0.5">Chưa tải dữ liệu</p>
-        </div>
-        <div class="relative w-full sm:w-80">
-          <input id="search" type="search" placeholder="Tìm theo Mã SP hoặc Tên SP…"
-            class="w-full rounded-xl border border-slate-200 bg-paper/40 pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
-          </svg>
-        </div>
-      </div>
-      <div id="product-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
-      <div class="overflow-x-auto scroll-thin max-h-[28rem] hidden sm:block">
-        <table class="min-w-full text-sm">
-          <thead id="product-head" class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide"></thead>
-          <tbody id="product-body" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
-      <!-- Mobile card list -->
-      <div id="product-cards" class="sm:hidden divide-y divide-slate-100 max-h-[28rem] overflow-y-auto scroll-thin"></div>
-      <div id="product-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
-        Không tìm thấy sản phẩm phù hợp.
-      </div>
-      <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">
-        Nhấn nút <span class="font-medium text-pine-700">+</span> để thêm sản phẩm vào phiếu xuất.
-      </div>
-    </section>
 
-    <!-- Danh sách phiếu xuất -->
-    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div class="flex-1">
-          <h2 class="text-base font-semibold text-pine-800">Danh sách phiếu xuất</h2>
-          <p id="phieu-summary" class="text-xs text-slate-500 mt-0.5">Chưa có sản phẩm nào trong phiếu.</p>
-        </div>
-        <div class="flex flex-wrap gap-2 items-center">
-          <button id="btn-xoa-phieu" type="button"
-            class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-40"
-            disabled>Xóa phiếu</button>
-          <button id="btn-xuat-sheets" type="button"
-            class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-sm font-medium shadow-card disabled:opacity-40 inline-flex items-center gap-2"
-            disabled>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-            </svg>
-            Xuất lên Google Sheets
-          </button>
-        </div>
-      </div>
-      <div class="overflow-x-auto scroll-thin hidden sm:block">
-        <table class="min-w-full text-sm">
-          <thead class="bg-slate-50 text-slate-600 text-left text-xs uppercase tracking-wide">
-            <tr>
-              <th class="px-4 py-3 font-semibold">#</th>
-              <th class="px-4 py-3 font-semibold">Mã SP</th>
-              <th class="px-4 py-3 font-semibold">Tên SP</th>
-              <th class="px-4 py-3 font-semibold">Đơn vị</th>
-              <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
-              <th class="px-4 py-3 font-semibold">Giá bán</th>
-              <th class="px-4 py-3 font-semibold text-right">Tổng tiền</th>
-              <th class="px-4 py-3 font-semibold">Ghi chú</th>
-              <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="phieu-body" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
-      <!-- Mobile card list -->
-      <div id="phieu-cards" class="sm:hidden divide-y divide-slate-100"></div>
-      <div id="phieu-empty" class="px-5 py-10 text-center text-sm text-slate-500">
-        Phiếu xuất đang trống.
-      </div>
-    </section>
-
-    <!-- Quản lý xuất hàng (Google Sheets) -->
-    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
-      <!-- Toolbar trên -->
-      <div class="px-5 py-4 border-b border-slate-100 flex flex-col gap-3">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+    <!-- ======================================================== -->
+    <!-- TAB 1: XUẤT HÀNG                                         -->
+    <!-- ======================================================== -->
+    <div id="tab-xuat-container" class="space-y-6">
+      <!-- Danh sách sản phẩm -->
+      <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
           <div class="flex-1">
-            <h2 class="text-base font-semibold text-pine-800 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pine-600" viewBox="0 0 24 24" fill="currentColor">
+            <h2 class="text-base font-semibold text-pine-800">Danh sách sản phẩm</h2>
+            <p id="product-count" class="text-xs text-slate-500 mt-0.5">Chưa tải dữ liệu</p>
+          </div>
+          <div class="relative w-full sm:w-80">
+            <input id="search" type="search" placeholder="Tìm theo Mã SP hoặc Tên SP…"
+              class="w-full rounded-xl border border-slate-200 bg-paper/40 pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
+            </svg>
+          </div>
+        </div>
+        <div id="product-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
+        <div class="overflow-x-auto scroll-thin max-h-[28rem] hidden sm:block">
+          <table class="min-w-full text-sm">
+            <thead id="product-head" class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide"></thead>
+            <tbody id="product-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <!-- Mobile card list -->
+        <div id="product-cards" class="sm:hidden divide-y divide-slate-100 max-h-[28rem] overflow-y-auto scroll-thin"></div>
+        <div id="product-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
+          Không tìm thấy sản phẩm phù hợp.
+        </div>
+        <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">
+          Nhấn nút <span class="font-medium text-pine-700">+</span> để thêm sản phẩm vào phiếu xuất.
+        </div>
+      </section>
+
+      <!-- Danh sách phiếu xuất -->
+      <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div class="flex-1">
+            <h2 class="text-base font-semibold text-pine-800">Danh sách phiếu xuất</h2>
+            <p id="phieu-summary" class="text-xs text-slate-500 mt-0.5">Chưa có sản phẩm nào trong phiếu.</p>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button id="btn-xoa-phieu" type="button"
+              class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-40"
+              disabled>Xóa phiếu</button>
+            <button id="btn-export-csv" type="button"
+              class="rounded-xl border border-pine-200 hover:bg-pine-50 text-pine-800 px-3.5 py-2 text-sm font-medium disabled:opacity-40 inline-flex items-center gap-1.5"
+              disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Xuất CSV
+            </button>
+            <button id="btn-xuat-sheets" type="button"
+              class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-sm font-medium shadow-card disabled:opacity-40 inline-flex items-center gap-2"
+              disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
               </svg>
-              Quản lý xuất hàng (Google Sheets)
-            </h2>
-            <p id="history-summary" class="text-xs text-slate-500 mt-0.5">Đang tải dữ liệu…</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="btn-reload-history" type="button"
-              class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Tải lại
+              Xuất lên Google Sheets
             </button>
           </div>
         </div>
-        <!-- Bộ lọc + actions -->
-        <div class="flex flex-wrap items-center gap-2">
-          <input id="history-search" type="search" placeholder="Tìm theo tên, mã SP, ghi chú…"
-            class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 w-full sm:w-56" />
-          <input id="history-filter-date" type="date"
-            class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-          <button id="btn-history-clear-date" type="button"
-            class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 text-slate-500">
-            Xóa lọc ngày
-          </button>
-          <div class="flex-1"></div>
-          <!-- Xuất CSV từ Sheets -->
-          <button id="btn-export-sheets-csv" type="button"
-            class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
-            disabled>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Xuất CSV
-          </button>
-          <!-- Xóa đã chọn -->
-          <button id="btn-history-delete" type="button"
-            class="rounded-xl bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
-            disabled>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Xóa đã chọn (<span id="history-selected-count">0</span>)
-          </button>
+        <div class="overflow-x-auto scroll-thin hidden sm:block">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-left text-xs uppercase tracking-wide">
+              <tr>
+                <th class="px-4 py-3 font-semibold">#</th>
+                <th class="px-4 py-3 font-semibold">Mã SP</th>
+                <th class="px-4 py-3 font-semibold">Tên SP</th>
+                <th class="px-4 py-3 font-semibold">Đơn vị</th>
+                <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
+                <th class="px-4 py-3 font-semibold">Giá bán</th>
+                <th class="px-4 py-3 font-semibold text-right">Tổng tiền</th>
+                <th class="px-4 py-3 font-semibold">Ghi chú</th>
+                <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="phieu-body" class="divide-y divide-slate-100"></tbody>
+          </table>
         </div>
-      </div>
-      <div id="history-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
-      <div class="overflow-x-auto scroll-thin max-h-[36rem] hidden sm:block">
-        <table class="min-w-full text-sm">
-          <thead class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
-            <tr>
-              <th class="px-3 py-3">
-                <input type="checkbox" id="history-check-all" class="rounded" />
-              </th>
-              <th class="px-4 py-3 font-semibold">#</th>
-              <th class="px-4 py-3 font-semibold">Ngày xuất</th>
-              <th class="px-4 py-3 font-semibold">Mã SP</th>
-              <th class="px-4 py-3 font-semibold">Tên SP</th>
-              <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
-              <th class="px-4 py-3 font-semibold">Giá bán</th>
-              <th class="px-4 py-3 font-semibold text-right">Tổng tiền</th>
-              <th class="px-4 py-3 font-semibold">Ghi chú</th>
-              <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
-      <!-- Mobile card list -->
-      <div id="history-cards" class="sm:hidden divide-y divide-slate-100 max-h-[36rem] overflow-y-auto scroll-thin"></div>
-      <div id="history-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
-        Chưa có dữ liệu xuất hàng.
-      </div>
-    </section>
-
-    <!-- Thống kê theo ngày -->
-    <section class="bg-white rounded-2xl shadow-card overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-base font-semibold text-pine-800">Thống kê theo ngày</h2>
-          <p id="stats-summary" class="text-xs text-slate-500 mt-0.5">Tải dữ liệu từ Google Sheets để xem thống kê.</p>
+        <!-- Mobile card list -->
+        <div id="phieu-cards" class="sm:hidden divide-y divide-slate-100"></div>
+        <div id="phieu-empty" class="px-5 py-10 text-center text-sm text-slate-500">
+          Phiếu xuất đang trống.
         </div>
-      </div>
-      <div id="stats-empty" class="hidden px-5 py-8 text-center text-sm text-slate-400">Chưa có dữ liệu.</div>
-      <!-- Desktop table -->
-      <div class="overflow-x-auto scroll-thin hidden sm:block">
-        <table class="min-w-full text-sm">
-          <thead class="bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
-            <tr>
-              <th class="px-4 py-3 font-semibold">Ngày xuất</th>
-              <th class="px-4 py-3 font-semibold text-right">Số dòng</th>
-              <th class="px-4 py-3 font-semibold text-right">Tổng SL</th>
-              <th class="px-4 py-3 font-semibold text-right">Tổng tiền bán</th>
-              <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="stats-body" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
-      <!-- Mobile cards -->
-      <div id="stats-cards" class="sm:hidden divide-y divide-slate-100"></div>
-    </section>
+      </section>
 
-    <!-- Modal sửa dòng -->
+      <!-- Quản lý xuất hàng (Google Sheets) -->
+      <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="flex-1">
+              <h2 class="text-base font-semibold text-pine-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pine-600" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                Quản lý xuất hàng (Google Sheets)
+              </h2>
+              <p id="history-summary" class="text-xs text-slate-500 mt-0.5">Đang tải dữ liệu…</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="btn-reload-history" type="button"
+                class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Tải lại
+              </button>
+            </div>
+          </div>
+          <!-- Bộ lọc + actions -->
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="history-search" type="search" placeholder="Tìm theo tên, mã SP, ghi chú…"
+              class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 w-full sm:w-56" />
+            <input id="history-filter-date" type="date"
+              class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <button id="btn-history-clear-date" type="button"
+              class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 text-slate-500">
+              Xóa lọc ngày
+            </button>
+            <div class="flex-1"></div>
+            <!-- Xuất CSV từ Sheets -->
+            <button id="btn-export-sheets-csv" type="button"
+              class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+              disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Xuất CSV
+            </button>
+            <!-- Xóa đã chọn -->
+            <button id="btn-history-delete" type="button"
+              class="rounded-xl bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+              disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Xóa đã chọn (<span id="history-selected-count">0</span>)
+            </button>
+          </div>
+        </div>
+        <div id="history-error" class="hidden px-5 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100"></div>
+        <div class="overflow-x-auto scroll-thin max-h-[36rem] hidden sm:block">
+          <table class="min-w-full text-sm">
+            <thead class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
+              <tr>
+                <th class="px-3 py-3">
+                  <input type="checkbox" id="history-check-all" class="rounded" />
+                </th>
+                <th class="px-4 py-3 font-semibold">#</th>
+                <th class="px-4 py-3 font-semibold">Ngày xuất</th>
+                <th class="px-4 py-3 font-semibold">Mã SP</th>
+                <th class="px-4 py-3 font-semibold">Tên SP</th>
+                <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
+                <th class="px-4 py-3 font-semibold">Giá bán</th>
+                <th class="px-4 py-3 font-semibold text-right">Tổng tiền</th>
+                <th class="px-4 py-3 font-semibold">Ghi chú</th>
+                <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <!-- Mobile card list -->
+        <div id="history-cards" class="sm:hidden divide-y divide-slate-100 max-h-[36rem] overflow-y-auto scroll-thin"></div>
+        <div id="history-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
+          Chưa có dữ liệu xuất hàng.
+        </div>
+      </section>
+
+      <!-- Thống kê theo ngày -->
+      <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold text-pine-800">Thống kê xuất hàng theo ngày</h2>
+            <p id="stats-summary" class="text-xs text-slate-500 mt-0.5">Tải dữ liệu từ Google Sheets để xem thống kê.</p>
+          </div>
+        </div>
+        <div id="stats-empty" class="hidden px-5 py-8 text-center text-sm text-slate-400">Chưa có dữ liệu.</div>
+        <!-- Desktop table -->
+        <div class="overflow-x-auto scroll-thin hidden sm:block">
+          <table class="min-w-full text-sm">
+            <thead class="bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
+              <tr>
+                <th class="px-4 py-3 font-semibold">Ngày xuất</th>
+                <th class="px-4 py-3 font-semibold text-right">Số dòng</th>
+                <th class="px-4 py-3 font-semibold text-right">Tổng SL</th>
+                <th class="px-4 py-3 font-semibold text-right">Tổng tiền bán</th>
+                <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="stats-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <!-- Mobile cards -->
+        <div id="stats-cards" class="sm:hidden divide-y divide-slate-100"></div>
+      </section>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: CHIẾT HÀNG (REPACKAGE)                            -->
+    <!-- ======================================================== -->
+    <div id="tab-chiet-container" class="space-y-6 hidden">
+      <!-- Section Lập phiếu chiết hàng -->
+      <section class="bg-white rounded-2xl shadow-card">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold text-pine-800 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pine-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              Lập phiếu chiết hàng (1 Nguồn &rarr; Nhiều Đích)
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Tách sản phẩm quy cách lớn thành các sản phẩm nhỏ hơn để bán lẻ.</p>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-6">
+          <!-- KHỐI 1: SẢN PHẨM NGUỒN (GÓI LỚN) -->
+          <div class="bg-pine-50/70 border border-pine-100 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between gap-2 border-b border-pine-200/60 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-pine-700 text-white flex items-center justify-center text-xs font-bold">1</span>
+                <h3 class="text-sm font-semibold text-pine-900 uppercase tracking-wide">Chọn hàng chiết (Nguồn - Gói lớn)</h3>
+              </div>
+              <span class="text-xs text-pine-700 font-medium bg-pine-100 px-2.5 py-1 rounded-full">Sản phẩm xuất giảm kho</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+              <!-- Searchable Combobox / Selected Box SP Nguồn -->
+              <div class="sm:col-span-8 space-y-1.5 relative">
+                <label class="block text-xs font-medium text-slate-700">Sản phẩm nguồn <span class="text-clay-600">*</span></label>
+                
+                <!-- Khi chưa chọn SP Nguồn (Search Input) -->
+                <div id="repackage-src-search-wrap" class="relative">
+                  <input id="repackage-src-search" type="search" autocomplete="off"
+                    placeholder="🔍 Gõ tên hoặc mã SP nguồn để tìm kiếm…"
+                    class="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+                  <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
+                  </svg>
+                  <!-- Dropdown kết quả tìm kiếm SP nguồn -->
+                  <div id="repackage-src-dropdown" class="hidden absolute z-50 left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto scroll-thin bg-white rounded-xl shadow-lift border border-slate-200 divide-y divide-slate-100">
+                  </div>
+                </div>
+
+                <!-- Khi đã chọn SP Nguồn (Verified Selected Card) -->
+                <div id="repackage-src-selected-wrap" class="hidden bg-emerald-50/90 border-2 border-emerald-400/80 rounded-xl p-2.5 px-3 flex items-center justify-between gap-3 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                    <div class="min-w-0">
+                      <p class="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider leading-none">Đã chọn SP Nguồn</p>
+                      <p id="repackage-src-name" class="text-sm font-bold text-emerald-950 truncate mt-0.5"></p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs bg-emerald-100 text-emerald-800 font-medium px-2.5 py-1 rounded-lg">
+                      ĐVT: <strong id="repackage-src-unit" class="text-emerald-900"></strong>
+                    </span>
+                    <button id="btn-repackage-src-change" type="button"
+                      class="text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg font-medium shadow-xs transition-colors">
+                      Đổi SP
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Số lượng nguồn -->
+              <div class="sm:col-span-4 space-y-1.5">
+                <label class="block text-xs font-medium text-slate-700">Số lượng xuất chiết <span class="text-clay-600">*</span></label>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" id="btn-repackage-src-qty-dec"
+                    class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-lg flex items-center justify-center">−</button>
+                  <input id="repackage-source-qty" type="number" min="0.01" step="any" value="1"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                  <button type="button" id="btn-repackage-src-qty-inc"
+                    class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-lg flex items-center justify-center">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KHỐI 2: SẢN PHẨM ĐÍCH (GÓI NHỎ - 1 TO N) -->
+          <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-clay-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+                <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">Chiết thành (Đích - Gói nhỏ)</h3>
+              </div>
+              <button id="btn-repackage-add-target" type="button"
+                class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-3 py-1.5 text-xs font-medium inline-flex items-center gap-1.5 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Thêm sản phẩm đích
+              </button>
+            </div>
+
+            <!-- Bảng Desktop sản phẩm đích -->
+            <div class="overflow-x-visible scroll-thin hidden sm:block">
+              <table class="min-w-full text-sm">
+                <thead class="bg-white text-slate-600 text-left text-xs uppercase tracking-wide border-b border-slate-200">
+                  <tr>
+                    <th class="px-3 py-2.5 font-semibold w-10 text-center">#</th>
+                    <th class="px-3 py-2.5 font-semibold w-80">Sản phẩm đích</th>
+                    <th class="px-3 py-2.5 font-semibold w-24 text-center">Đơn vị</th>
+                    <th class="px-3 py-2.5 font-semibold w-36 text-center">Số lượng nhận</th>
+                    <th class="px-3 py-2.5 font-semibold">Ghi chú</th>
+                    <th class="px-3 py-2.5 font-semibold w-12 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody id="repackage-targets-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+
+            <!-- Thẻ Mobile sản phẩm đích -->
+            <div id="repackage-targets-cards" class="sm:hidden space-y-3"></div>
+
+            <div id="repackage-targets-empty" class="py-8 text-center text-sm text-slate-400">
+              Chưa có sản phẩm đích nào. Nhấn <strong>"Thêm sản phẩm đích"</strong> để bắt đầu phân bổ.
+            </div>
+          </div>
+
+          <!-- Tóm tắt phân bổ chiết -->
+          <div id="repackage-summary-card" class="bg-pine-50 rounded-xl p-4 border border-pine-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
+            <div class="flex items-center gap-2 text-pine-900">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pine-700 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+              <span id="repackage-summary-text" class="font-medium">Vui lòng chọn sản phẩm nguồn và sản phẩm đích.</span>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="text-slate-500">Tổng dòng đích:</span>
+              <strong id="repackage-target-count-badge" class="font-semibold text-pine-800 ml-1">0</strong>
+            </div>
+          </div>
+
+          <!-- Thanh nút hành động chính ở dưới cùng -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
+            <button id="btn-repackage-reset" type="button"
+              class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm hover:bg-slate-50 font-medium text-slate-700 inline-flex items-center justify-center gap-2 shadow-xs transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Làm mới phiếu
+            </button>
+            <button id="btn-repackage-save-sheets" type="button"
+              class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-6 py-2.5 text-sm font-semibold shadow-card inline-flex items-center justify-center gap-2 transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              Xuất lên Google Sheets
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section Quản lý lịch sử chiết hàng (Sheets / Local) -->
+      <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="flex-1">
+              <h2 class="text-base font-semibold text-pine-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pine-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Lịch sử chiết hàng (Repackage History)
+              </h2>
+              <p id="repackage-history-summary" class="text-xs text-slate-500 mt-0.5">Đang tải lịch sử chiết…</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="btn-repackage-reload-history" type="button"
+                class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Tải lại
+              </button>
+            </div>
+          </div>
+
+          <!-- Bộ lọc & hành động lịch sử chiết -->
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="repackage-history-search" type="search" placeholder="Tìm theo tên SP nguồn/đích, mã, ghi chú…"
+              class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 w-full sm:w-64" />
+            <input id="repackage-history-filter-date" type="date"
+              class="rounded-xl border border-slate-200 bg-paper/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <button id="btn-repackage-clear-date" type="button"
+              class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 text-slate-500">
+              Xóa lọc ngày
+            </button>
+            <div class="flex-1"></div>
+            <!-- Xóa đã chọn -->
+            <button id="btn-repackage-delete-selected" type="button"
+              class="rounded-xl bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+              disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Xóa đã chọn (<span id="repackage-selected-count">0</span>)
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto scroll-thin max-h-[36rem] hidden sm:block">
+          <table class="min-w-full text-sm">
+            <thead class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide">
+              <tr>
+                <th class="px-3 py-3 w-10">
+                  <input type="checkbox" id="repackage-history-check-all" class="rounded" />
+                </th>
+                <th class="px-3 py-3 font-semibold w-10">#</th>
+                <th class="px-4 py-3 font-semibold">Ngày chiết</th>
+                <th class="px-4 py-3 font-semibold">Hàng nguồn (Xuất giảm)</th>
+                <th class="px-4 py-3 font-semibold">Hàng đích (Nhập tăng)</th>
+                <th class="px-4 py-3 font-semibold">Ghi chú</th>
+                <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="repackage-history-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+
+        <!-- Mobile cards -->
+        <div id="repackage-history-cards" class="sm:hidden divide-y divide-slate-100 max-h-[36rem] overflow-y-auto scroll-thin"></div>
+        <div id="repackage-history-empty" class="hidden px-5 py-10 text-center text-sm text-slate-500">
+          Chưa có dữ liệu chiết hàng.
+        </div>
+      </section>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODALS                                                   -->
+    <!-- ======================================================== -->
+
+    <!-- Modal sửa dòng xuất hàng -->
     <div id="edit-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
       <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 space-y-4">
         <h3 class="text-base font-semibold text-pine-800">Cập nhật thông tin xuất hàng</h3>
@@ -341,7 +613,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-slate-500 mb-1">Mã SP</label>
-            <input id="edit-productid" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm" />
+            <input id="edit-productid" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm font-mono text-slate-600" />
           </div>
           <div>
             <label class="block text-xs text-slate-500 mb-1">Ngày xuất</label>
@@ -350,13 +622,19 @@
         </div>
         <div>
           <label class="block text-xs text-slate-500 mb-1">Tên SP</label>
-          <input id="edit-productname" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm" />
+          <input id="edit-productname" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm font-medium" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-slate-500 mb-1">Số lượng <span class="text-clay-600">*</span></label>
-            <input id="edit-quantity" type="number" min="1" step="1"
-              class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+            <div class="flex items-center gap-1">
+              <button type="button" id="btn-edit-qty-dec"
+                class="w-9 h-9 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-base flex items-center justify-center select-none shadow-xs">−</button>
+              <input id="edit-quantity" type="number" min="1" step="1"
+                class="w-full rounded-xl border border-slate-200 px-2 py-2 text-sm text-center font-bold text-ink focus:outline-none focus:ring-2 focus:ring-pine-500" />
+              <button type="button" id="btn-edit-qty-inc"
+                class="w-9 h-9 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-base flex items-center justify-center select-none shadow-xs">+</button>
+            </div>
           </div>
           <div>
             <label class="block text-xs text-slate-500 mb-1">Giá bán</label>
@@ -379,7 +657,7 @@
       </div>
     </div>
 
-    <!-- Modal xác nhận xuất Google Sheets -->
+    <!-- Modal xác nhận xuất Google Sheets (Xuất hàng) -->
     <div id="export-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
       <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 space-y-4">
         <div class="flex items-center gap-2.5 text-pine-800">
@@ -426,18 +704,123 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal xác nhận xuất Google Sheets (Chiết hàng) -->
+    <div id="repackage-export-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 space-y-4">
+        <div class="flex items-center gap-2.5 text-pine-800">
+          <span class="p-2 bg-pine-100 rounded-xl text-pine-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+          </span>
+          <h3 class="text-base font-semibold">Xác nhận chiết hàng</h3>
+        </div>
+        
+        <div class="bg-pine-50/80 rounded-xl p-3.5 space-y-3 text-xs text-pine-950 border border-pine-100">
+          <div>
+            <span class="text-slate-500 font-medium">1. Hàng nguồn (Xuất giảm):</span>
+            <div class="mt-1 flex items-center justify-between gap-2 bg-white rounded-xl p-2.5 border border-red-100">
+              <span id="repackage-modal-source-name" class="font-semibold text-slate-900 text-sm truncate"></span>
+              <span id="repackage-modal-source-badge" class="font-bold text-red-600 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-md text-xs shrink-0"></span>
+            </div>
+          </div>
+          <div>
+            <span class="text-slate-500 font-medium">2. Hàng đích phân bổ (Nhập tăng):</span>
+            <ul id="repackage-modal-targets-list" class="mt-1 space-y-1 bg-white rounded-xl p-2.5 border border-emerald-100 max-h-48 overflow-y-auto scroll-thin divide-y divide-slate-100"></ul>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1.5">Chọn ngày thực hiện chiết hàng <span class="text-clay-600">*</span></label>
+          <input id="repackage-modal-date" type="date"
+            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+        </div>
+
+        <div class="flex gap-2 justify-end pt-1">
+          <button id="btn-repackage-modal-cancel" type="button"
+            class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 font-medium">Hủy</button>
+          <button id="btn-repackage-modal-confirm" type="button"
+            class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-5 py-2 text-sm font-medium shadow-card inline-flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+            Xác nhận chiết
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal sửa phiếu chiết hàng (1 Nguồn -> Nhiều Đích) -->
+    <div id="repackage-edit-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+      <div class="bg-white rounded-2xl shadow-lift w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-thin">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-semibold text-pine-800">Cập nhật phiếu chiết hàng</h3>
+          <button id="btn-repackage-edit-close" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
+        </div>
+        <input type="hidden" id="repackage-edit-sessionid" />
+        
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Ngày thực hiện chiết <span class="text-clay-600">*</span></label>
+          <input id="repackage-edit-date" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+        </div>
+
+        <!-- Thông tin nguồn -->
+        <div class="bg-red-50/50 border border-red-100 rounded-xl p-3.5 space-y-2">
+          <label class="block text-xs font-semibold text-red-800 uppercase tracking-wide">1. Sản phẩm nguồn (Xuất giảm)</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+            <div class="sm:col-span-2">
+              <input id="repackage-edit-fromname" readonly class="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800" />
+            </div>
+            <div>
+              <div class="flex items-center gap-1">
+                <span class="text-xs text-slate-500 font-medium shrink-0">SL xuất:</span>
+                <button type="button" id="btn-repackage-edit-fromqty-dec"
+                  class="w-8 h-8 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-base flex items-center justify-center select-none shadow-xs">−</button>
+                <input id="repackage-edit-fromqty" type="number" min="0.01" step="any"
+                  class="w-full rounded-xl bg-white border border-slate-200 px-1 py-2 text-sm font-bold text-red-600 text-center focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                <button type="button" id="btn-repackage-edit-fromqty-inc"
+                  class="w-8 h-8 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-base flex items-center justify-center select-none shadow-xs">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách đích -->
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-emerald-800 uppercase tracking-wide">2. Danh sách sản phẩm đích (Nhập tăng)</label>
+          <div id="repackage-edit-targets-container" class="space-y-2.5 max-h-60 overflow-y-auto scroll-thin">
+            <!-- Dynamic targets injected here -->
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2 border-t border-slate-100">
+          <button id="btn-repackage-edit-cancel" type="button"
+            class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 font-medium">Hủy</button>
+          <button id="btn-repackage-edit-save" type="button"
+            class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-5 py-2 text-sm font-medium shadow-card inline-flex items-center gap-2">Lưu thay đổi</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[min(22rem,calc(100%-2rem))]"></div>
 
   <script>
-    /* ========== Trạng thái ========== */
+    /* ========== Trạng thái Chung & Xuất Hàng ========== */
     const state = {
+      activeTab: "xuat",
       products: [],
       columns: [],
-      keys: { maSP: null, tenSP: null, donVi: null, giaBan: null, giaNhap: null },
+      keys: { maSP: null, tenSP: null, donVi: null, giaBan: null, giaNhap: null, initStock: null, repackageStock: null },
       phieu: [],
-      usedIds: new Set()
+      usedIds: new Set(),
+      // Trạng thái Chiết Hàng
+      repackage: {
+        sourceId: "",
+        sourceQty: 1,
+        targets: [] // { id, productId, quantity, note }
+      }
     };
 
     const COLUMN_LABELS = {
@@ -468,10 +851,11 @@
       tenSP: ["tensp", "ten_sp", "name", "productname", "ten"],
       donVi: ["donvi", "don_vi", "unit", "dvt"],
       giaBan: ["sellingprice", "giaban", "gia_ban"],
-      giaNhap: ["purchaseprice", "gianhap", "gia_nhap"]
+      giaNhap: ["purchaseprice", "gianhap", "gia_nhap"],
+      initStock: ["initstock", "init_stock", "tonkho", "ton_kho"],
+      repackageStock: ["repackagestock", "repackage_stock", "tonchiet"]
     };
 
-    /* Header xuất — khớp 100% export-stock.csv */
     const EXPORT_HEADER = [
       "id", "date", "productId", "productName",
       "quantity", "sellingPrice", "purchasePrice",
@@ -521,11 +905,6 @@
       return raw;
     }
 
-    function formatMoney(value) {
-      const n = toNumber(value, 0);
-      return n.toLocaleString("vi-VN");
-    }
-
     function todayInputValue() {
       const d = new Date();
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -541,7 +920,6 @@
       return Math.floor(Date.now() / 1000);
     }
 
-    /* ID 13 ký tự hex, cùng kiểu với export-stock.csv (vd. 69562ce817059) */
     function genLineId() {
       let id = "";
       do {
@@ -551,7 +929,6 @@
       return id;
     }
 
-    /* ========== Toast ========== */
     function toast(message, type) {
       const colors = {
         success: "bg-pine-800 text-white",
@@ -579,7 +956,29 @@
       $("status-chip").innerHTML = `<span class="h-2 w-2 rounded-full ${dot}"></span>${escapeHtml(text)}`;
     }
 
-    /* ========== Parse CSV (quoted fields, BOM, CRLF) ========== */
+    /* ========== Tab Switching ========== */
+    function switchTab(tab) {
+      state.activeTab = tab;
+      const isXuat = tab === "xuat";
+
+      $("tab-xuat-container").classList.toggle("hidden", !isXuat);
+      $("tab-chiet-container").classList.toggle("hidden", isXuat);
+
+      if (isXuat) {
+        $("tab-btn-xuat").className = "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white text-pine-900 shadow-sm";
+        $("tab-btn-chiet").className = "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-white/80 hover:text-white";
+        $("header-title").textContent = "Phiếu xuất hàng hàng ngày";
+        $("badge-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
+      } else {
+        $("tab-btn-chiet").className = "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white text-pine-900 shadow-sm";
+        $("tab-btn-xuat").className = "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-white/80 hover:text-white";
+        $("header-title").textContent = "Chiết hàng & Đóng gói sản phẩm";
+        $("badge-chip").textContent = `Đích: ${state.repackage.targets.length} SP`;
+        renderRepackageTargets();
+      }
+    }
+
+    /* ========== Parse CSV ========== */
     function parseCSV(text) {
       if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
       const rows = [];
@@ -643,11 +1042,14 @@
         tenSP: pick(KEY_CANDIDATES.tenSP),
         donVi: pick(KEY_CANDIDATES.donVi),
         giaBan: pick(KEY_CANDIDATES.giaBan),
-        giaNhap: pick(KEY_CANDIDATES.giaNhap)
+        giaNhap: pick(KEY_CANDIDATES.giaNhap),
+        initStock: pick(KEY_CANDIDATES.initStock),
+        repackageStock: pick(KEY_CANDIDATES.repackageStock)
       };
     }
 
     function getField(product, keyName) {
+      if (!product) return "";
       const col = state.keys[keyName];
       return col ? (product[col] || "") : "";
     }
@@ -656,7 +1058,7 @@
       $("splash").classList.add("hidden");
     }
 
-    /* ========== Tải products.csv, fallback product.csv ========== */
+    /* ========== Tải products.csv ========== */
     async function loadProducts() {
       const files = ["products.csv", "product.csv"];
       let lastError = "";
@@ -707,9 +1109,8 @@
       hideSplash();
     }
 
-    /* ========== Bảng sản phẩm ========== */
+    /* ========== Bảng sản phẩm Xuất hàng ========== */
     function orderedColumns() {
-      // Chỉ hiển thị 4 cột: Mã SP, Tên SP, Đơn vị, Giá bán
       return [
         state.keys.maSP, state.keys.tenSP, state.keys.donVi, state.keys.giaBan
       ].filter(Boolean);
@@ -727,7 +1128,6 @@
       const cols = orderedColumns();
       const maCol = state.keys.maSP;
       const tenCol = state.keys.tenSP;
-      const selectedId = state.selected ? getField(state.selected, "maSP") : "";
 
       const filtered = state.products.filter((p) => {
         if (!keyword) return true;
@@ -742,7 +1142,6 @@
 
       $("product-empty").classList.toggle("hidden", filtered.length > 0 || !state.products.length);
 
-      // Desktop: bảng
       $("product-body").innerHTML = filtered.map((p, idx) => {
         const ma      = getField(p, "maSP");
         const inPhieu = state.phieu.some((r) => r.productId === ma);
@@ -759,7 +1158,6 @@
         </tr>`;
       }).join("");
 
-      // Mobile: card list
       $("product-cards").innerHTML = filtered.map((p, idx) => {
         const ma      = getField(p, "maSP");
         const ten     = getField(p, "tenSP");
@@ -783,8 +1181,21 @@
     }
 
     function findProductByMa(maSP) {
+      if (!maSP) return null;
       const col = state.keys.maSP;
       return state.products.find((p) => String(p[col]) === String(maSP));
+    }
+
+    function filterProducts(query, limit = 40) {
+      const q = String(query || "").trim().toLowerCase();
+      const maCol = state.keys.maSP;
+      const tenCol = state.keys.tenSP;
+      if (!q) return state.products.slice(0, limit);
+      return state.products.filter((p) => {
+        const ma = String(p[maCol] || "").toLowerCase();
+        const ten = String(p[tenCol] || "").toLowerCase();
+        return ma.includes(q) || ten.includes(q);
+      }).slice(0, limit);
     }
 
     /* ========== Phiếu xuất ========== */
@@ -817,11 +1228,14 @@
       const hasRows = state.phieu.length > 0;
       $("phieu-empty").classList.toggle("hidden", hasRows);
       $("btn-xoa-phieu").disabled = !hasRows;
+      $("btn-export-csv").disabled = !hasRows;
       $("btn-xuat-sheets").disabled = !hasRows;
 
       const tongSL = state.phieu.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
       const tongTien = state.phieu.reduce((sum, row) => sum + (Number(row.quantity || 0) * Number(row.sellingPrice || 0)), 0);
-      $("phieu-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
+      if (state.activeTab === "xuat") {
+        $("badge-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
+      }
       $("phieu-summary").textContent = hasRows
         ? `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")} · Tổng tiền ${tongTien.toLocaleString("vi-VN")} đ`
         : "Chưa có sản phẩm nào trong phiếu.";
@@ -863,7 +1277,6 @@
         </tr>
       `}).join("");
 
-      // Mobile cards
       $("phieu-cards").innerHTML = state.phieu.map((row, idx) => {
         const rowTotal = (Number(row.quantity) || 0) * (Number(row.sellingPrice) || 0);
         return `
@@ -877,7 +1290,6 @@
               class="shrink-0 rounded-lg px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 border border-red-100">Xóa</button>
           </div>
           <div class="space-y-2">
-            <!-- Số lượng và Giá bán -->
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-xs text-slate-400 mb-1">Số lượng</label>
@@ -902,7 +1314,6 @@
               <span class="text-slate-500">Tổng tiền:</span>
               <span data-field="row-total" class="font-bold text-pine-700 text-sm">${rowTotal.toLocaleString("vi-VN")} đ</span>
             </div>
-            <!-- Ghi chú full width -->
             <div>
               <label class="block text-xs text-slate-400 mb-1">Ghi chú</label>
               <input type="text" maxlength="200" value="${escapeHtml(row.note || "")}"
@@ -930,13 +1341,11 @@
       }
       row.updatedAt = unixNow();
 
-      // Cập nhật hiển thị thành tiền từng dòng
       const rowTotal = (Number(row.quantity) || 0) * (Number(row.sellingPrice) || 0);
       document.querySelectorAll(`[data-id="${id}"] [data-field="row-total"]`).forEach((el) => {
         el.textContent = `${rowTotal.toLocaleString("vi-VN")} đ`;
       });
 
-      // Cập nhật summary mà không re-render toàn bộ
       const tongSL = state.phieu.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
       const tongTien = state.phieu.reduce((sum, r) => sum + (Number(r.quantity || 0) * Number(r.sellingPrice || 0)), 0);
       $("phieu-summary").textContent = `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")} · Tổng tiền ${tongTien.toLocaleString("vi-VN")} đ`;
@@ -946,11 +1355,11 @@
       const row = state.phieu.find((r) => r.id === id);
       state.phieu = state.phieu.filter((r) => r.id !== id);
       renderPhieu();
-      renderProducts(); // cập nhật highlight
+      renderProducts();
       toast(row ? `Đã xóa ${row.productName}` : "Đã xóa dòng", "info");
     }
 
-    /* ========== Xuất CSV — schema export-stock.csv, UTF-8 BOM ========== */
+    /* ========== Xuất CSV — UTF-8 BOM (Phiếu xuất) ========== */
     function csvEscape(value) {
       const s = String(value ?? "");
       if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -997,12 +1406,8 @@
       toast(`Đã xuất ${filename}`, "success");
     }
 
-    /* ========== Google Sheets — URL cố định ========== */
+    /* ========== Google Sheets — URL Endpoint ========== */
     var SHEETS_URL = "https://script.google.com/macros/s/AKfycbwdleboFPOhYW4y7JNAyVMgtLuPrjyEEFzf3oveJ9WiurbwsyVXXWwRaItEkpmfEm0/exec";
-
-    function getSheetsUrl() {
-      return SHEETS_URL;
-    }
 
     function openExportModal() {
       if (!state.phieu.length) {
@@ -1017,10 +1422,8 @@
       $("export-modal-qty").textContent = tongSL.toLocaleString("vi-VN");
       $("export-modal-total").textContent = `${tongTien.toLocaleString("vi-VN")} đ`;
 
-      // Lấy ngày đã lưu trước đó, nếu chưa có thì dùng ngày hôm nay
       const savedDate = localStorage.getItem("sam_pet_export_date") || todayInputValue();
       $("export-modal-date").value = savedDate;
-
       $("export-modal").classList.remove("hidden");
     }
 
@@ -1035,7 +1438,6 @@
         return;
       }
 
-      // Lưu lại ngày đã chọn cho các lần sau
       localStorage.setItem("sam_pet_export_date", selectedDate);
 
       const url = SHEETS_URL;
@@ -1067,7 +1469,6 @@
           body: JSON.stringify({ rows })
         });
         toast("Đã gửi " + rows.length + " dòng lên Google Sheets!", "success");
-        // Xóa phiếu xuất sau khi gửi thành công
         state.phieu = [];
         renderPhieu();
         closeExportModal();
@@ -1080,85 +1481,14 @@
       }
     }
 
-    /* ========== Thống kê theo ngày ========== */
-    function renderStats() {
-      if (!sheetHistory.length) {
-        $("stats-empty").classList.remove("hidden");
-        $("stats-body").innerHTML = "";
-        $("stats-cards").innerHTML = "";
-        $("stats-summary").textContent = "Chưa có dữ liệu.";
-        return;
-      }
-      $("stats-empty").classList.add("hidden");
-
-      // Gom nhóm theo ngày
-      const byDate = {};
-      sheetHistory.forEach((row) => {
-        const d = row.date || "—";
-        if (!byDate[d]) byDate[d] = { rows: 0, qty: 0, selling: 0, purchase: 0 };
-        byDate[d].rows     += 1;
-        byDate[d].qty      += Number(row.quantity    || 0);
-        byDate[d].selling  += Number(row.sellingPrice  || 0) * Number(row.quantity || 0);
-        byDate[d].purchase += Number(row.purchasePrice || 0) * Number(row.quantity || 0);
-      });
-
-      // Sắp xếp ngày mới nhất lên trên (DD-MM-YYYY → so sánh đảo ngược)
-      const dates = Object.keys(byDate).sort((a, b) => {
-        const toYMD = (s) => { const p = s.split("-"); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s; };
-        return toYMD(b).localeCompare(toYMD(a));
-      });
-
-      const totalSelling = dates.reduce((s, d) => s + byDate[d].selling, 0);
-      $("stats-summary").textContent =
-        `${dates.length} ngày · Tổng doanh thu: ${totalSelling.toLocaleString("vi-VN")} đ`;
-
-      // Desktop table
-      $("stats-body").innerHTML = dates.map((date) => {
-        const g = byDate[date];
-        return `<tr class="hover:bg-pine-50">
-          <td class="px-4 py-2.5 font-medium whitespace-nowrap">${escapeHtml(date)}</td>
-          <td class="px-4 py-2.5 text-right text-slate-600">${g.rows}</td>
-          <td class="px-4 py-2.5 text-right text-slate-600">${g.qty.toLocaleString("vi-VN")}</td>
-          <td class="px-4 py-2.5 text-right font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")}</td>
-          <td class="px-4 py-2.5 text-right">
-            <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
-              class="rounded-lg px-3 py-1 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
-              Xem
-            </button>
-          </td>
-        </tr>`;
-      }).join("");
-
-      // Mobile cards
-      $("stats-cards").innerHTML = dates.map((date) => {
-        const g = byDate[date];
-        return `<div class="px-4 py-3 flex items-center justify-between gap-3">
-          <div>
-            <p class="font-medium text-sm">${escapeHtml(date)}</p>
-            <p class="text-xs text-slate-500 mt-0.5">${g.rows} dòng · SL ${g.qty.toLocaleString("vi-VN")}</p>
-            <p class="text-xs mt-0.5">
-              <span class="font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")} đ</span>
-            </p>
-          </div>
-          <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
-            class="shrink-0 rounded-lg px-3 py-1.5 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
-            Xem
-          </button>
-        </div>`;
-      }).join("");
-    }
-
     /* ========== Quản lý xuất hàng (Google Sheets) ========== */
-    var sheetHistory = [];       // toàn bộ dữ liệu từ Sheet
-    var historySelected = new Set(); // ids đang được chọn
+    var sheetHistory = [];
+    var historySelected = new Set();
 
-    // Normalize chuỗi date về DD-MM-YYYY — xử lý cả Date object stringify lẫn plain text
     function normalizeDateVN(raw) {
       if (!raw) return "";
       var s = String(raw).trim();
-      // Đã đúng định dạng DD-MM-YYYY
       if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
-      // Chuỗi dạng "Sat Aug 29 2026 00:00:00 GMT+0700..."
       var parsed = new Date(s);
       if (!isNaN(parsed.getTime())) {
         var dd = String(parsed.getDate()).padStart(2, "0");
@@ -1170,8 +1500,7 @@
 
     function getFilteredHistory() {
       const keyword   = ($("history-search").value || "").trim().toLowerCase();
-      const dateFilter = ($("history-filter-date").value || "").trim(); // YYYY-MM-DD
-      // Chuyển date filter sang DD-MM-YYYY để so sánh với cột date trong Sheet
+      const dateFilter = ($("history-filter-date").value || "").trim();
       const dateStr = dateFilter ? formatNgayXuat(dateFilter) : "";
 
       return sheetHistory.filter((r) => {
@@ -1226,7 +1555,6 @@
           </tr>`;
       }).join("");
 
-      // Mobile cards
       $("history-cards").innerHTML = filtered.map((row, idx) => {
         const checked = historySelected.has(row.id) ? "checked" : "";
         const cardBg = historySelected.has(row.id) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
@@ -1264,7 +1592,6 @@
       if (countEl) countEl.textContent = count;
       $("btn-history-delete").disabled = count === 0;
 
-      // Sync checkbox "chọn tất cả"
       const filtered   = getFilteredHistory();
       const allChecked = filtered.length > 0 && filtered.every((r) => historySelected.has(r.id));
       $("history-check-all").checked       = allChecked;
@@ -1274,12 +1601,37 @@
     async function loadSheetHistory() {
       $("history-summary").textContent = "Đang tải dữ liệu từ Google Sheets…";
       $("history-error").classList.add("hidden");
+      $("history-empty").classList.add("hidden");
 
-      // Skeleton loading rows
-      const skeletonRow = `<tr>${Array(10).fill('<td class="px-4 py-3"><div class="h-3 bg-slate-100 rounded animate-pulse"></div></td>').join("")}</tr>`;
-      $("history-body").innerHTML = Array(5).fill(skeletonRow).join("");
-      const skeletonCard = `<div class="px-4 py-3 space-y-2"><div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div><div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div></div>`;
-      $("history-cards").innerHTML = Array(4).fill(skeletonCard).join("");
+      const btnReload = $("btn-reload-history");
+      if (btnReload) {
+        btnReload.disabled = true;
+        const icon = btnReload.querySelector("svg");
+        if (icon) icon.classList.add("animate-spin");
+      }
+
+      const loadingTableHtml = `
+        <tr>
+          <td colspan="10" class="py-12 text-center bg-white">
+            <div class="inline-flex flex-col items-center justify-center gap-3">
+              <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+              <p class="text-sm font-medium text-pine-900">Đang tải lịch sử xuất hàng từ Google Sheets…</p>
+              <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+            </div>
+          </td>
+        </tr>`;
+
+      const loadingCardsHtml = `
+        <div class="py-12 px-4 text-center bg-white">
+          <div class="inline-flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+            <p class="text-sm font-medium text-pine-900">Đang tải lịch sử xuất hàng từ Google Sheets…</p>
+            <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+          </div>
+        </div>`;
+
+      $("history-body").innerHTML = loadingTableHtml;
+      $("history-cards").innerHTML = loadingCardsHtml;
 
       try {
         const res = await fetch(SHEETS_URL, { method: "GET" });
@@ -1292,7 +1644,6 @@
           if (r.productId) r.productId = String(r.productId).replace(/^'+/, '');
           return r;
         }).sort((a, b) => {
-          // Chuyển DD-MM-YYYY → YYYY-MM-DD để so sánh chuỗi đúng thứ tự
           const toYMD = (s) => {
             const p = (s || "").split("-");
             return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s;
@@ -1307,6 +1658,13 @@
         $("history-error").classList.remove("hidden");
         $("history-summary").textContent = "Tải thất bại.";
         $("history-body").innerHTML = "";
+        $("history-cards").innerHTML = "";
+      } finally {
+        if (btnReload) {
+          btnReload.disabled = false;
+          const icon = btnReload.querySelector("svg");
+          if (icon) icon.classList.remove("animate-spin");
+        }
       }
     }
 
@@ -1337,7 +1695,6 @@
       }
     }
 
-    /* ── Modal sửa dòng ── */
     function openEditModal(rowId) {
       const row = sheetHistory.find((r) => r.id === rowId);
       if (!row) return;
@@ -1350,7 +1707,6 @@
       $("edit-purchaseprice").value= row.purchasePrice || "";
       $("edit-note").value         = row.note || "";
 
-      // Chuyển DD-MM-YYYY → YYYY-MM-DD cho input[type=date]
       if (row.date) {
         const parts = row.date.split("-");
         if (parts.length === 3) {
@@ -1402,7 +1758,6 @@
             }
           })
         });
-        // Cập nhật optimistic local state
         const local = sheetHistory.find((r) => r.id === id);
         if (local) {
           if (dateIso) local.date = formatNgayXuat(dateIso);
@@ -1422,7 +1777,6 @@
       }
     }
 
-    /* ── Xuất CSV từ dữ liệu Sheets ── */
     function exportSheetsCSV() {
       const filtered = getFilteredHistory();
       if (!filtered.length) {
@@ -1453,10 +1807,964 @@
       toast(`Đã xuất ${filtered.length} dòng → ${filename}`, "success");
     }
 
-    /* ========== Sự kiện ========== */
+    /* ========== Thống kê xuất hàng theo ngày ========== */
+    function renderStats() {
+      if (!sheetHistory.length) {
+        $("stats-empty").classList.remove("hidden");
+        $("stats-body").innerHTML = "";
+        $("stats-cards").innerHTML = "";
+        $("stats-summary").textContent = "Chưa có dữ liệu.";
+        return;
+      }
+      $("stats-empty").classList.add("hidden");
+
+      const byDate = {};
+      sheetHistory.forEach((row) => {
+        const d = row.date || "—";
+        if (!byDate[d]) byDate[d] = { rows: 0, qty: 0, selling: 0, purchase: 0 };
+        byDate[d].rows     += 1;
+        byDate[d].qty      += Number(row.quantity    || 0);
+        byDate[d].selling  += Number(row.sellingPrice  || 0) * Number(row.quantity || 0);
+        byDate[d].purchase += Number(row.purchasePrice || 0) * Number(row.quantity || 0);
+      });
+
+      const dates = Object.keys(byDate).sort((a, b) => {
+        const toYMD = (s) => { const p = s.split("-"); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s; };
+        return toYMD(b).localeCompare(toYMD(a));
+      });
+
+      const totalSelling = dates.reduce((s, d) => s + byDate[d].selling, 0);
+      $("stats-summary").textContent =
+        `${dates.length} ngày · Tổng doanh thu: ${totalSelling.toLocaleString("vi-VN")} đ`;
+
+      $("stats-body").innerHTML = dates.map((date) => {
+        const g = byDate[date];
+        return `<tr class="hover:bg-pine-50">
+          <td class="px-4 py-2.5 font-medium whitespace-nowrap">${escapeHtml(date)}</td>
+          <td class="px-4 py-2.5 text-right text-slate-600">${g.rows}</td>
+          <td class="px-4 py-2.5 text-right text-slate-600">${g.qty.toLocaleString("vi-VN")}</td>
+          <td class="px-4 py-2.5 text-right font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")}</td>
+          <td class="px-4 py-2.5 text-right">
+            <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
+              class="rounded-lg px-3 py-1 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
+              Xem
+            </button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      $("stats-cards").innerHTML = dates.map((date) => {
+        const g = byDate[date];
+        return `<div class="px-4 py-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium text-sm">${escapeHtml(date)}</p>
+            <p class="text-xs text-slate-500 mt-0.5">${g.rows} dòng · SL ${g.qty.toLocaleString("vi-VN")}</p>
+            <p class="text-xs mt-0.5">
+              <span class="font-semibold text-pine-700">${g.selling.toLocaleString("vi-VN")} đ</span>
+            </p>
+          </div>
+          <button type="button" data-action="filter-date" data-date="${escapeHtml(date)}"
+            class="shrink-0 rounded-lg px-3 py-1.5 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">
+            Xem
+          </button>
+        </div>`;
+      }).join("");
+    }
+
+
+    /* ========================================================================== */
+    /* LOGIC CHỨC NĂNG CHIẾT HÀNG (PRODUCT REPACKAGE)                            */
+    /* ========================================================================== */
+    var repackageHistory = [];
+    var repackageSelected = new Set();
+
+    /* --- Searchable Combobox cho SP Nguồn (Không hiện số lượng tồn) --- */
+    function renderRepackageSourceDropdown(query = "") {
+      const dropdown = $("repackage-src-dropdown");
+      const matched = filterProducts(query, 30);
+
+      if (!matched.length) {
+        dropdown.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">Không tìm thấy sản phẩm phù hợp.</div>`;
+        dropdown.classList.remove("hidden");
+        return;
+      }
+
+      dropdown.innerHTML = matched.map((p) => {
+        const ma = getField(p, "maSP");
+        const ten = getField(p, "tenSP");
+        const dv = getField(p, "donVi") || "—";
+        const isSelected = ma === state.repackage.sourceId;
+
+        return `
+          <div data-action="select-src-product" data-masp="${escapeHtml(ma)}"
+            class="px-3.5 py-2.5 hover:bg-pine-50 cursor-pointer flex items-center justify-between gap-2 transition-colors ${isSelected ? 'bg-pine-100/70 font-medium' : ''}">
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-ink truncate">${escapeHtml(ten)}</p>
+              <p class="text-xs text-slate-500 mt-0.5">Đơn vị: <span class="font-sans font-medium text-slate-700">${escapeHtml(dv)}</span></p>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      dropdown.classList.remove("hidden");
+    }
+
+    function selectRepackageSourceProduct(maSP) {
+      const p = findProductByMa(maSP);
+      if (!p) return;
+
+      state.repackage.sourceId = maSP;
+      const ten = getField(p, "tenSP");
+      const dv = getField(p, "donVi") || "—";
+
+      $("repackage-src-search").value = ten;
+      $("repackage-src-dropdown").classList.add("hidden");
+
+      $("repackage-src-name").textContent = ten;
+      $("repackage-src-unit").textContent = dv;
+      
+      $("repackage-src-search-wrap").classList.add("hidden");
+      $("repackage-src-selected-wrap").classList.remove("hidden");
+
+      updateRepackageSummary();
+    }
+
+    function clearRepackageSource(shouldFocus = false) {
+      state.repackage.sourceId = "";
+      $("repackage-src-search").value = "";
+      $("repackage-src-dropdown").classList.add("hidden");
+      
+      $("repackage-src-selected-wrap").classList.add("hidden");
+      $("repackage-src-search-wrap").classList.remove("hidden");
+
+      if (shouldFocus) {
+        setTimeout(() => {
+          $("repackage-src-search").focus();
+          renderRepackageSourceDropdown("");
+        }, 50);
+      }
+
+      updateRepackageSummary();
+    }
+
+    /* --- Quản lý các dòng sản phẩm đích --- */
+    function addRepackageTargetRow() {
+      const newTarget = {
+        id: genLineId(),
+        productId: "",
+        quantity: 1,
+        note: ""
+      };
+      state.repackage.targets.push(newTarget);
+      renderRepackageTargets();
+    }
+
+    function removeRepackageTargetRow(id) {
+      state.repackage.targets = state.repackage.targets.filter((t) => t.id !== id);
+      renderRepackageTargets();
+    }
+
+    function updateRepackageTargetField(id, field, value) {
+      const row = state.repackage.targets.find((t) => t.id === id);
+      if (!row) return;
+      if (field === "productId") {
+        row.productId = value;
+      } else if (field === "quantity") {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) {
+          toast("Số lượng đích phải lớn hơn 0.", "warning");
+          return;
+        }
+        row.quantity = n;
+      } else if (field === "note") {
+        row.note = value;
+      }
+      updateRepackageSummary();
+    }
+
+    function renderRepackageTargets() {
+      const targets = state.repackage.targets;
+      const isEmpty = targets.length === 0;
+      $("repackage-targets-empty").classList.toggle("hidden", !isEmpty);
+      $("repackage-target-count-badge").textContent = targets.length;
+
+      // Desktop table
+      $("repackage-targets-body").innerHTML = targets.map((t, idx) => {
+        const p = findProductByMa(t.productId);
+        const name = p ? getField(p, "tenSP") : "";
+        const unit = p ? getField(p, "donVi") : "—";
+        const isSelected = !!t.productId;
+
+        const targetSelectUI = isSelected
+          ? `
+            <div class="flex items-center justify-between gap-2 p-2 px-3 bg-emerald-50/80 border-2 border-emerald-400/80 rounded-xl">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                <div class="min-w-0">
+                  <p class="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider leading-none">Đã chọn SP đích</p>
+                  <p class="text-sm font-bold text-emerald-950 truncate mt-0.5" title="${escapeHtml(name)}">${escapeHtml(name)}</p>
+                </div>
+              </div>
+              <button type="button" data-action="target-clear-product" data-targetid="${escapeHtml(t.id)}"
+                class="text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg font-medium shrink-0 transition-colors shadow-xs">
+                Đổi SP
+              </button>
+            </div>
+          `
+          : `
+            <div class="relative">
+              <input type="search" autocomplete="off" data-action="target-search" data-targetid="${escapeHtml(t.id)}"
+                placeholder="🔍 Gõ tên hoặc mã SP đích để chọn…"
+                class="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
+              </svg>
+              <div data-dropdown-for="${escapeHtml(t.id)}" class="hidden absolute z-[100] left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto scroll-thin bg-white rounded-xl shadow-2xl border border-slate-300 divide-y divide-slate-100 min-w-[320px]">
+              </div>
+            </div>
+          `;
+
+        return `
+        <tr data-targetid="${escapeHtml(t.id)}" class="relative ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}">
+          <td class="px-3 py-2.5 text-center text-xs text-slate-400 font-medium">${idx + 1}</td>
+          <td class="px-3 py-2.5">
+            ${targetSelectUI}
+          </td>
+          <td class="px-3 py-2.5 text-slate-600 text-sm font-medium text-center" data-field="unit-label">${escapeHtml(unit)}</td>
+          <td class="px-3 py-2.5">
+            <div class="flex items-center justify-center gap-1">
+              <button type="button" data-action="target-qty-dec" data-targetid="${escapeHtml(t.id)}"
+                class="w-8 h-8 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-base flex items-center justify-center select-none shadow-xs">−</button>
+              <input type="number" min="0.01" step="any" value="${escapeHtml(String(t.quantity))}" data-action="target-qty" data-targetid="${escapeHtml(t.id)}"
+                class="w-16 rounded-lg border border-slate-200 bg-white px-1 py-1.5 text-sm text-center font-bold text-ink focus:outline-none focus:ring-2 focus:ring-pine-500" />
+              <button type="button" data-action="target-qty-inc" data-targetid="${escapeHtml(t.id)}"
+                class="w-8 h-8 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-base flex items-center justify-center select-none shadow-xs">+</button>
+            </div>
+          </td>
+          <td class="px-3 py-2.5">
+            <input type="text" maxlength="200" value="${escapeHtml(t.note || "")}" data-action="target-note" data-targetid="${escapeHtml(t.id)}" placeholder="Ghi chú chiết…"
+              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </td>
+          <td class="px-3 py-2.5 text-right">
+            <button type="button" data-action="target-delete" data-targetid="${escapeHtml(t.id)}" class="rounded-lg p-2 text-red-600 hover:bg-red-50 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      // Mobile cards
+      $("repackage-targets-cards").innerHTML = targets.map((t, idx) => {
+        const p = findProductByMa(t.productId);
+        const name = p ? getField(p, "tenSP") : "";
+        const unit = p ? getField(p, "donVi") : "—";
+        const isSelected = !!t.productId;
+
+        const targetSelectUI = isSelected
+          ? `
+            <div class="flex items-center justify-between gap-2 p-2.5 bg-emerald-50/80 border-2 border-emerald-400/80 rounded-xl">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                <div class="min-w-0">
+                  <p class="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider leading-none">Đã chọn SP đích</p>
+                  <p class="text-sm font-bold text-emerald-950 truncate mt-0.5">${escapeHtml(name)}</p>
+                </div>
+              </div>
+              <button type="button" data-action="target-clear-product" data-targetid="${escapeHtml(t.id)}"
+                class="text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg font-medium shrink-0 shadow-xs">
+                Đổi SP
+              </button>
+            </div>
+          `
+          : `
+            <div class="relative">
+              <input type="search" autocomplete="off" data-action="target-search" data-targetid="${escapeHtml(t.id)}"
+                placeholder="🔍 Gõ tên hoặc mã SP đích để chọn…"
+                class="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium" />
+              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
+              </svg>
+              <div data-dropdown-for="${escapeHtml(t.id)}" class="hidden absolute z-[100] left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto scroll-thin bg-white rounded-xl shadow-2xl border border-slate-300 divide-y divide-slate-100">
+              </div>
+            </div>
+          `;
+
+        return `
+        <div data-targetid="${escapeHtml(t.id)}" class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-sm space-y-3 relative">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-pine-800 bg-pine-100 px-2.5 py-0.5 rounded-md">Đích #${idx + 1}</span>
+            <button type="button" data-action="target-delete" data-targetid="${escapeHtml(t.id)}" class="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded-md border border-red-100">Xóa</button>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Sản phẩm đích</label>
+            ${targetSelectUI}
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1 font-medium">Số lượng nhận</label>
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-action="target-qty-dec" data-targetid="${escapeHtml(t.id)}"
+                  class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-lg flex items-center justify-center select-none shadow-xs">−</button>
+                <input type="number" min="0.01" step="any" value="${escapeHtml(String(t.quantity))}" data-action="target-qty" data-targetid="${escapeHtml(t.id)}"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm text-center font-bold text-ink focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                <button type="button" data-action="target-qty-inc" data-targetid="${escapeHtml(t.id)}"
+                  class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-lg flex items-center justify-center select-none shadow-xs">+</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1 font-medium">Đơn vị tính</label>
+              <input readonly value="${escapeHtml(unit)}" data-field="unit-input" class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-600 font-medium" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Ghi chú</label>
+            <input type="text" maxlength="200" value="${escapeHtml(t.note || "")}" data-action="target-note" data-targetid="${escapeHtml(t.id)}" placeholder="Ghi chú chiết…"
+              class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+          </div>
+        </div>`;
+      }).join("");
+
+      updateRepackageSummary();
+    }
+
+    /* --- Searchable Dropdown cho SP Đích (Không hiện số lượng tồn) --- */
+    function showTargetSearchDropdown(targetId, query = "") {
+      const dropdowns = Array.from(document.querySelectorAll(`[data-dropdown-for="${targetId}"]`));
+      if (!dropdowns.length) return;
+
+      // Ẩn tất cả dropdown khác & gỡ z-50 khỏi các dòng
+      document.querySelectorAll("[data-dropdown-for]").forEach((el) => {
+        if (!dropdowns.includes(el)) el.classList.add("hidden");
+      });
+      document.querySelectorAll("#repackage-targets-body tr, #repackage-targets-cards > div").forEach((el) => {
+        el.classList.remove("z-50");
+      });
+
+      // Nâng z-index của dòng/thẻ hiện tại lên cao nhất
+      dropdowns.forEach((dd) => {
+        const parentContainer = dd.closest("tr, [data-targetid]");
+        if (parentContainer) {
+          parentContainer.classList.add("z-50");
+        }
+      });
+
+      const matched = filterProducts(query, 30);
+      const htmlContent = !matched.length
+        ? `<div class="p-3 text-center text-xs text-slate-400">Không tìm thấy sản phẩm phù hợp.</div>`
+        : matched.map((p) => {
+            const ma = getField(p, "maSP");
+            const ten = getField(p, "tenSP");
+            const dv = getField(p, "donVi") || "—";
+
+            return `
+              <div data-action="select-target-product" data-targetid="${escapeHtml(targetId)}" data-masp="${escapeHtml(ma)}"
+                class="px-3.5 py-2.5 hover:bg-pine-50 cursor-pointer flex items-center justify-between gap-2 transition-colors">
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold text-ink truncate">${escapeHtml(ten)}</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Đơn vị: <span class="font-sans font-medium text-slate-700">${escapeHtml(dv)}</span></p>
+                </div>
+              </div>
+            `;
+          }).join("");
+
+      dropdowns.forEach((dd) => {
+        dd.innerHTML = htmlContent;
+        dd.classList.remove("hidden");
+      });
+    }
+
+    function selectRepackageTargetProduct(targetId, maSP) {
+      const p = findProductByMa(maSP);
+      const row = state.repackage.targets.find((t) => t.id === targetId);
+      if (!row || !p) return;
+
+      row.productId = maSP;
+      renderRepackageTargets();
+    }
+
+    function updateRepackageSummary() {
+      const srcId = state.repackage.sourceId;
+      const srcQty = Number($("repackage-source-qty").value || 1);
+      const srcProduct = findProductByMa(srcId);
+      const targets = state.repackage.targets;
+
+      const validTargets = targets.filter((t) => t.productId && Number(t.quantity) > 0);
+
+      if (!srcProduct) {
+        $("repackage-summary-text").textContent = "Vui lòng chọn sản phẩm nguồn.";
+        return;
+      }
+
+      const srcText = `-${srcQty} ${getField(srcProduct, "donVi") || ""} ${getField(srcProduct, "tenSP")}`;
+      if (!validTargets.length) {
+        $("repackage-summary-text").textContent = `Nguồn: ${srcText} ➔ Chưa có sản phẩm đích hợp lệ.`;
+        return;
+      }
+
+      const destSummary = validTargets.map((t) => {
+        const tp = findProductByMa(t.productId);
+        const name = tp ? getField(tp, "tenSP") : t.productId;
+        const unit = tp ? getField(tp, "donVi") : "";
+        return `+${t.quantity} ${unit} ${name}`;
+      }).join(", ");
+
+      $("repackage-summary-text").textContent = `Chiết: ${srcText} ➔ Phân bổ: ${destSummary}`;
+    }
+
+    function resetRepackageForm() {
+      clearRepackageSource();
+      state.repackage.sourceQty = 1;
+      state.repackage.targets = [];
+      $("repackage-source-qty").value = 1;
+      renderRepackageTargets();
+      toast("Đã làm mới phiếu chiết.", "info");
+    }
+
+    function openRepackageModal() {
+      const srcId = state.repackage.sourceId;
+      const srcQty = Number($("repackage-source-qty").value || 1);
+      const srcProduct = findProductByMa(srcId);
+      const validTargets = state.repackage.targets.filter((t) => t.productId && Number(t.quantity) > 0);
+
+      if (!srcProduct || !validTargets.length) {
+        toast("Vui lòng chọn sản phẩm nguồn và ít nhất 1 sản phẩm đích.", "error");
+        return;
+      }
+
+      const srcName = getField(srcProduct, "tenSP");
+      const srcUnit = getField(srcProduct, "donVi") || "";
+
+      $("repackage-modal-source-name").textContent = srcName;
+      $("repackage-modal-source-badge").textContent = `-${srcQty} ${srcUnit}`.trim();
+
+      $("repackage-modal-targets-list").innerHTML = validTargets.map((t) => {
+        const tp = findProductByMa(t.productId);
+        const name = tp ? getField(tp, "tenSP") : t.productId;
+        const unit = tp ? getField(tp, "donVi") : "";
+        return `
+          <li class="flex items-center justify-between gap-2 py-1 text-xs">
+            <span class="font-medium text-slate-800 truncate">${escapeHtml(name)} ${t.note ? `<span class="text-slate-400 font-normal italic">(${escapeHtml(t.note)})</span>` : ""}</span>
+            <span class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md shrink-0">+${t.quantity} ${unit}</span>
+          </li>`;
+      }).join("");
+
+      const savedDate = localStorage.getItem("sam_pet_repackage_date") || todayInputValue();
+      $("repackage-modal-date").value = savedDate;
+      $("repackage-export-modal").classList.remove("hidden");
+    }
+
+    function closeRepackageModal() {
+      $("repackage-export-modal").classList.add("hidden");
+    }
+
+    async function confirmRepackageToSheets() {
+      const selectedDate = $("repackage-modal-date").value;
+      if (!selectedDate) {
+        toast("Vui lòng chọn ngày thực hiện chiết hàng.", "error");
+        return;
+      }
+
+      localStorage.setItem("sam_pet_repackage_date", selectedDate);
+
+      const srcId = state.repackage.sourceId;
+      const srcQty = Number($("repackage-source-qty").value || 1);
+      const srcProduct = findProductByMa(srcId);
+      const validTargets = state.repackage.targets.filter((t) => t.productId && Number(t.quantity) > 0);
+
+      const now = unixNow();
+      const dateFormatted = formatNgayXuat(selectedDate);
+      const sessionId = "repack_" + genLineId();
+
+      // 1 Phiếu chiết hàng (1 Nguồn -> N Đích):
+      // Dòng đầu tiên nhận fromQuantity = srcQty để tính tổng xuất kho chính xác trên Google Sheets.
+      // Các dòng tiếp theo fromQuantity = 0 để tránh bị nhân đôi/nhân ba số lượng nguồn khi tính SUM.
+      const newRows = validTargets.map((t, idx) => {
+        const tp = findProductByMa(t.productId);
+        return {
+          id: genLineId(),
+          sessionId: sessionId,
+          date: dateFormatted,
+          fromProductId: "'" + String(srcId).replace(/^'+/, ''),
+          fromProductName: getField(srcProduct, "tenSP"),
+          toProductId: "'" + String(t.productId).replace(/^'+/, ''),
+          toProductName: tp ? getField(tp, "tenSP") : t.productId,
+          fromQuantity: idx === 0 ? srcQty : 0,
+          sessionFromQty: srcQty,
+          toQuantity: Number(t.quantity),
+          note: t.note || "",
+          createdAt: now,
+          updatedAt: now
+        };
+      });
+
+      const btnConfirm = $("btn-repackage-modal-confirm");
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = `Đang xử lý…`;
+
+      try {
+        saveRepackageHistoryLocal(newRows);
+
+        await fetch(SHEETS_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            action: "repackage",
+            type: "repackage",
+            rows: newRows
+          })
+        });
+
+        toast(`Chiết hàng thành công! Đã ghi nhận phiếu chiết gồm ${newRows.length} mặt hàng đích.`, "success");
+        closeRepackageModal();
+        resetRepackageForm();
+        await loadRepackageHistory();
+      } catch (err) {
+        toast("Lỗi khi đồng bộ chiết hàng: " + err.message, "error");
+      } finally {
+        btnConfirm.disabled = false;
+        btnConfirm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Xác nhận chiết`;
+      }
+    }
+
+    /* ========== Quản lý Lịch sử Chiết Hàng (Gom nhóm theo Phiếu/Session) ========== */
+    function getStoredRepackageHistory() {
+      try {
+        const raw = localStorage.getItem("sam_pet_repackage_history");
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveRepackageHistoryLocal(newRows) {
+      const current = getStoredRepackageHistory();
+      const combined = [...newRows, ...current];
+      const map = new Map();
+      combined.forEach((r) => map.set(r.id, r));
+      localStorage.setItem("sam_pet_repackage_history", JSON.stringify([...map.values()]));
+    }
+
+    function updateStoredRepackageHistory(updatedList) {
+      localStorage.setItem("sam_pet_repackage_history", JSON.stringify(updatedList));
+    }
+
+    async function loadRepackageHistory() {
+      $("repackage-history-summary").textContent = "Đang tải dữ liệu chiết hàng…";
+      $("repackage-history-empty").classList.add("hidden");
+
+      const btnReload = $("btn-repackage-reload-history");
+      if (btnReload) {
+        btnReload.disabled = true;
+        const icon = btnReload.querySelector("svg");
+        if (icon) icon.classList.add("animate-spin");
+      }
+
+      const loadingTableHtml = `
+        <tr>
+          <td colspan="7" class="py-12 text-center bg-white">
+            <div class="inline-flex flex-col items-center justify-center gap-3">
+              <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+              <p class="text-sm font-medium text-pine-900">Đang tải lịch sử chiết hàng từ Google Sheets…</p>
+              <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+            </div>
+          </td>
+        </tr>`;
+
+      const loadingCardsHtml = `
+        <div class="py-12 px-4 text-center bg-white">
+          <div class="inline-flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+            <p class="text-sm font-medium text-pine-900">Đang tải lịch sử chiết hàng từ Google Sheets…</p>
+            <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+          </div>
+        </div>`;
+
+      $("repackage-history-body").innerHTML = loadingTableHtml;
+      $("repackage-history-cards").innerHTML = loadingCardsHtml;
+
+      let localData = getStoredRepackageHistory();
+
+      try {
+        const res = await fetch(SHEETS_URL + "?type=repackage", { method: "GET" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.repackageRows && Array.isArray(data.repackageRows)) {
+            const remoteRows = data.repackageRows.map((r) => {
+              r.date = normalizeDateVN(r.date);
+              if (r.id) r.id = String(r.id).replace(/^'+/, '');
+              if (r.fromProductId) r.fromProductId = String(r.fromProductId).replace(/^'+/, '');
+              if (r.toProductId) r.toProductId = String(r.toProductId).replace(/^'+/, '');
+              return r;
+            });
+            const map = new Map();
+            localData.forEach((r) => map.set(r.id, r));
+            remoteRows.forEach((r) => map.set(r.id, r));
+            localData = [...map.values()];
+            updateStoredRepackageHistory(localData);
+          }
+        }
+      } catch (err) {}
+
+      repackageHistory = localData.map((r) => {
+        r.date = normalizeDateVN(r.date);
+        return r;
+      }).sort((a, b) => {
+        const toYMD = (s) => {
+          const p = (s || "").split("-");
+          return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s;
+        };
+        const dateCmp = toYMD(b.date).localeCompare(toYMD(a.date));
+        if (dateCmp !== 0) return dateCmp;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+
+      repackageSelected.clear();
+      renderRepackageHistory();
+
+      if (btnReload) {
+        btnReload.disabled = false;
+        const icon = btnReload.querySelector("svg");
+        if (icon) icon.classList.remove("animate-spin");
+      }
+    }
+
+    // Nhóm các dòng chiết hàng theo Phiếu (Session)
+    function getRepackageSessions() {
+      const map = new Map();
+      repackageHistory.forEach((r) => {
+        const key = r.sessionId || (r.createdAt ? `${r.date}_${r.fromProductId}_${r.createdAt}` : r.id);
+        if (!map.has(key)) {
+          map.set(key, {
+            sessionId: key,
+            date: r.date,
+            fromProductId: r.fromProductId,
+            fromProductName: r.fromProductName,
+            fromQuantity: r.sessionFromQty !== undefined ? Number(r.sessionFromQty) : (Number(r.fromQuantity) || 0),
+            createdAt: r.createdAt || 0,
+            updatedAt: r.updatedAt || 0,
+            items: []
+          });
+        }
+        const session = map.get(key);
+        if (session.fromQuantity === 0 && Number(r.fromQuantity) > 0) {
+          session.fromQuantity = Number(r.fromQuantity);
+        }
+        session.items.push(r);
+      });
+      return [...map.values()];
+    }
+
+    function getFilteredRepackageSessions() {
+      const keyword = ($("repackage-history-search").value || "").trim().toLowerCase();
+      const dateFilter = ($("repackage-history-filter-date").value || "").trim();
+      const dateStr = dateFilter ? formatNgayXuat(dateFilter) : "";
+
+      const sessions = getRepackageSessions();
+
+      return sessions.filter((s) => {
+        const matchDate = !dateStr || (s.date || "") === dateStr;
+        const matchKw = !keyword ||
+          (s.fromProductId   || "").toLowerCase().includes(keyword) ||
+          (s.fromProductName || "").toLowerCase().includes(keyword) ||
+          s.items.some((it) =>
+            (it.toProductId   || "").toLowerCase().includes(keyword) ||
+            (it.toProductName || "").toLowerCase().includes(keyword) ||
+            (it.note          || "").toLowerCase().includes(keyword)
+          );
+        return matchDate && matchKw;
+      });
+    }
+
+    function renderRepackageHistory() {
+      const filtered = getFilteredRepackageSessions();
+      const allSessions = getRepackageSessions();
+      const isEmpty = filtered.length === 0;
+
+      $("repackage-history-empty").classList.toggle("hidden", !isEmpty);
+
+      const dateFilter = $("repackage-history-filter-date").value;
+      const keyword = ($("repackage-history-search").value || "").trim();
+      const isFiltered = dateFilter || keyword;
+
+      $("repackage-history-summary").textContent = isFiltered
+        ? `Hiển thị ${filtered.length} / ${allSessions.length} phiếu chiết`
+        : `${allSessions.length} phiếu chiết · cập nhật lúc ${new Date().toLocaleTimeString("vi-VN")}`;
+
+      $("repackage-history-body").innerHTML = filtered.map((session, idx) => {
+        const checked = repackageSelected.has(session.sessionId) ? "checked" : "";
+        const rowBg = repackageSelected.has(session.sessionId) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-50/50");
+        return `
+        <tr data-sessionid="${escapeHtml(session.sessionId)}" class="hover:bg-pine-50/80 transition-colors ${rowBg}">
+          <td class="px-3 py-3 align-top">
+            <input type="checkbox" data-action="repackcheck" value="${escapeHtml(session.sessionId)}" ${checked} class="rounded text-pine-600 focus:ring-pine-500" />
+          </td>
+          <td class="px-3 py-3 align-top text-slate-400 text-xs font-mono">${idx + 1}</td>
+          <td class="px-4 py-3 align-top whitespace-nowrap text-slate-700 font-medium text-xs">${escapeHtml(session.date || "")}</td>
+          <td class="px-4 py-3 align-top">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center font-bold text-red-600 bg-red-50 border border-red-200/60 px-2 py-0.5 rounded-md text-xs">-${session.fromQuantity}</span>
+              <span class="font-semibold text-pine-900 text-xs">${escapeHtml(session.fromProductName || session.fromProductId)}</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 align-top">
+            <div class="space-y-1.5">
+              ${session.items.map((it) => `
+                <div class="flex items-center gap-1.5 text-xs flex-wrap">
+                  <span class="inline-flex items-center font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md text-xs shrink-0">+${it.toQuantity}</span>
+                  <span class="font-medium text-slate-800">${escapeHtml(it.toProductName || it.toProductId)}</span>
+                </div>
+              `).join("")}
+            </div>
+          </td>
+          <td class="px-4 py-3 align-top text-xs text-slate-500">
+            ${session.items.map((it) => it.note ? `<div class="truncate max-w-[14rem] py-0.5">📝 ${escapeHtml(it.note)}</div>` : "").filter(Boolean).join("") || "—"}
+          </td>
+          <td class="px-4 py-3 align-top text-right whitespace-nowrap">
+            <button type="button" data-action="repack-edit" data-sessionid="${escapeHtml(session.sessionId)}"
+              class="rounded-lg px-2.5 py-1 text-xs font-medium text-pine-700 hover:bg-pine-100/70 border border-pine-200 shadow-sm transition-colors">Sửa</button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      $("repackage-history-cards").innerHTML = filtered.map((session, idx) => {
+        const checked = repackageSelected.has(session.sessionId) ? "checked" : "";
+        const cardBg = repackageSelected.has(session.sessionId) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-50/50");
+        return `
+        <div class="p-4 space-y-3 ${cardBg}">
+          <div class="flex items-start justify-between gap-2">
+            <label class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+              <input type="checkbox" data-action="repackcheck" value="${escapeHtml(session.sessionId)}" ${checked} class="rounded shrink-0 text-pine-600 focus:ring-pine-500" />
+              <div class="min-w-0">
+                <span class="text-xs text-slate-400 font-medium">${escapeHtml(session.date || "")}</span>
+                <p class="font-semibold text-sm text-pine-900 truncate">
+                  ${escapeHtml(session.fromProductName || session.fromProductId)} &rarr; ${session.items.length} mặt hàng đích
+                </p>
+              </div>
+            </label>
+            <button type="button" data-action="repack-edit" data-sessionid="${escapeHtml(session.sessionId)}"
+              class="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-pine-700 border border-pine-200 hover:bg-pine-50">Sửa</button>
+          </div>
+
+          <div class="bg-white/90 rounded-xl p-3 text-xs space-y-2 border border-slate-100">
+            <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+              <span class="text-slate-500 font-medium">Hàng nguồn (Giảm):</span>
+              <span class="font-bold text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">-${session.fromQuantity} ${escapeHtml(session.fromProductName || session.fromProductId)}</span>
+            </div>
+            <div class="space-y-1.5 pt-0.5">
+              <span class="text-slate-500 font-medium block">Hàng đích (Tăng):</span>
+              <div class="space-y-1 pl-2">
+                ${session.items.map((it) => `
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-700 font-medium truncate">${escapeHtml(it.toProductName || it.toProductId)}</span>
+                    <span class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md shrink-0">+${it.toQuantity}</span>
+                  </div>
+                  ${it.note ? `<p class="text-[11px] text-slate-400 pl-1 italic truncate">📝 ${escapeHtml(it.note)}</p>` : ""}
+                `).join("")}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+
+      updateRepackageSelectionUI();
+    }
+
+    function updateRepackageSelectionUI() {
+      const count = repackageSelected.size;
+      const countEl = $("repackage-selected-count");
+      if (countEl) countEl.textContent = count;
+      $("btn-repackage-delete-selected").disabled = count === 0;
+
+      const filtered = getFilteredRepackageSessions();
+      const allChecked = filtered.length > 0 && filtered.every((s) => repackageSelected.has(s.sessionId));
+      $("repackage-history-check-all").checked = allChecked;
+      $("repackage-history-check-all").indeterminate = !allChecked && filtered.some((s) => repackageSelected.has(s.sessionId));
+    }
+
+    async function deleteSelectedRepackageRows() {
+      const selectedSessionIds = [...repackageSelected];
+      if (!selectedSessionIds.length) return;
+      if (!confirm(`Xóa ${selectedSessionIds.length} phiếu chiết hàng đã chọn?`)) return;
+
+      $("btn-repackage-delete-selected").disabled = true;
+      $("btn-repackage-delete-selected").textContent = "Đang xóa…";
+
+      try {
+        const rowsToDelete = repackageHistory.filter((r) => {
+          const key = r.sessionId || (r.createdAt ? `${r.date}_${r.fromProductId}_${r.createdAt}` : r.id);
+          return selectedSessionIds.includes(key) || selectedSessionIds.includes(r.id);
+        });
+        const idsToDelete = rowsToDelete.map((r) => r.id);
+
+        repackageHistory = repackageHistory.filter((r) => !idsToDelete.includes(r.id));
+        updateStoredRepackageHistory(repackageHistory);
+
+        if (idsToDelete.length > 0) {
+          await fetch(SHEETS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({ action: "repackage_delete", ids: idsToDelete })
+          });
+        }
+
+        toast(`Đã xóa ${selectedSessionIds.length} phiếu chiết hàng (${idsToDelete.length} dòng quy cách).`, "success");
+        repackageSelected.clear();
+        renderRepackageHistory();
+      } catch (err) {
+        toast("Lỗi khi xóa: " + err.message, "error");
+      } finally {
+        $("btn-repackage-delete-selected").disabled = repackageSelected.size === 0;
+        $("btn-repackage-delete-selected").innerHTML =
+          `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Xóa đã chọn (<span id="repackage-selected-count">${repackageSelected.size}</span>)`;
+      }
+    }
+
+    function openRepackageEditModal(sessionId) {
+      const sessions = getRepackageSessions();
+      const session = sessions.find((s) => s.sessionId === sessionId);
+      if (!session) return;
+
+      $("repackage-edit-sessionid").value = session.sessionId;
+      $("repackage-edit-fromname").value = session.fromProductName || session.fromProductId;
+      $("repackage-edit-fromqty").value = session.fromQuantity;
+
+      if (session.date) {
+        const parts = session.date.split("-");
+        if (parts.length === 3) {
+          $("repackage-edit-date").value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+
+      const container = $("repackage-edit-targets-container");
+      container.innerHTML = session.items.map((it, idx) => `
+        <div class="bg-emerald-50/40 border border-emerald-100 rounded-xl p-3 space-y-2 text-xs" data-target-row-id="${escapeHtml(it.id)}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-semibold text-pine-900">${idx + 1}. ${escapeHtml(it.toProductName || it.toProductId)}</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+            <div class="sm:col-span-5 flex items-center gap-1">
+              <span class="text-slate-500 font-medium shrink-0">SL nhận:</span>
+              <button type="button" data-action="repack-edit-qty-dec"
+                class="w-7 h-7 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm flex items-center justify-center select-none shadow-xs">−</button>
+              <input type="number" min="0.01" step="any" value="${it.toQuantity}"
+                class="repack-edit-item-qty w-14 rounded-lg bg-white border border-slate-200 px-1 py-1.5 text-xs font-bold text-emerald-700 text-center focus:outline-none focus:ring-1 focus:ring-pine-500" />
+              <button type="button" data-action="repack-edit-qty-inc"
+                class="w-7 h-7 shrink-0 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm flex items-center justify-center select-none shadow-xs">+</button>
+            </div>
+            <div class="sm:col-span-7 flex items-center gap-1.5">
+              <span class="text-slate-500 font-medium shrink-0">Ghi chú:</span>
+              <input type="text" maxlength="200" value="${escapeHtml(it.note || "")}" placeholder="Ghi chú quy cách…"
+                class="repack-edit-item-note w-full rounded-lg bg-white border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-pine-500" />
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+      $("repackage-edit-modal").classList.remove("hidden");
+    }
+
+    function closeRepackageEditModal() {
+      $("repackage-edit-modal").classList.add("hidden");
+    }
+
+    async function saveRepackageEditModal() {
+      const sessionId = $("repackage-edit-sessionid").value;
+      const fromQty   = Number($("repackage-edit-fromqty").value);
+      const dateIso   = $("repackage-edit-date").value;
+
+      if (!Number.isFinite(fromQty) || fromQty <= 0) {
+        toast("Số lượng nguồn phải lớn hơn 0.", "error");
+        return;
+      }
+
+      const container = $("repackage-edit-targets-container");
+      const targetDivs = container.querySelectorAll("[data-target-row-id]");
+      const targetUpdates = [];
+
+      for (const div of targetDivs) {
+        const rowId = div.getAttribute("data-target-row-id");
+        const qtyInput = div.querySelector(".repack-edit-item-qty");
+        const noteInput = div.querySelector(".repack-edit-item-note");
+        const toQty = Number(qtyInput ? qtyInput.value : 0);
+        const note = (noteInput ? noteInput.value : "").trim();
+
+        if (!Number.isFinite(toQty) || toQty <= 0) {
+          toast("Số lượng đích phải lớn hơn 0.", "error");
+          return;
+        }
+
+        targetUpdates.push({ id: rowId, toQuantity: toQty, note: note });
+      }
+
+      const btnSave = $("btn-repackage-edit-save");
+      btnSave.disabled = true;
+      btnSave.textContent = "Đang lưu…";
+
+      try {
+        const now = unixNow();
+        const dateFormatted = dateIso ? formatNgayXuat(dateIso) : undefined;
+
+        targetUpdates.forEach((tu, idx) => {
+          const row = repackageHistory.find((r) => r.id === tu.id);
+          if (row) {
+            if (dateFormatted) row.date = dateFormatted;
+            row.fromQuantity = idx === 0 ? fromQty : 0;
+            row.sessionFromQty = fromQty;
+            row.toQuantity = tu.toQuantity;
+            row.note = tu.note;
+            row.updatedAt = now;
+          }
+        });
+
+        updateStoredRepackageHistory(repackageHistory);
+
+        const updatePromises = targetUpdates.map((tu, idx) => {
+          return fetch(SHEETS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({
+              action: "repackage_update",
+              row: {
+                id: tu.id,
+                sessionId: sessionId,
+                date: dateFormatted,
+                fromQuantity: idx === 0 ? fromQty : 0,
+                toQuantity: tu.toQuantity,
+                note: tu.note,
+                updatedAt: now
+              }
+            })
+          });
+        });
+
+        await Promise.all(updatePromises);
+
+        toast("Đã cập nhật phiếu chiết hàng.", "success");
+        closeRepackageEditModal();
+        renderRepackageHistory();
+      } catch (err) {
+        toast("Lỗi khi lưu: " + err.message, "error");
+      } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = "Lưu thay đổi";
+      }
+    }
+
+    /* ========================================================================== */
+    /* SỰ KIỆN GIAO DIỆN & TƯƠNG TÁC                                              */
+    /* ========================================================================== */
+
+    // Tab switcher
+    $("tab-btn-xuat").addEventListener("click", () => switchTab("xuat"));
+    $("tab-btn-chiet").addEventListener("click", () => switchTab("chiet"));
+
+    // Tìm kiếm sản phẩm xuất hàng
     $("search").addEventListener("input", renderProducts);
 
-    // Nút "+" thêm vào phiếu — dùng event delegation cho cả desktop và mobile
+    // Nút "+" thêm vào phiếu xuất
     ["product-body", "product-cards"].forEach((id) => {
       $(id).addEventListener("click", (e) => {
         const btn = e.target.closest("[data-action='add-to-phieu']");
@@ -1480,7 +2788,6 @@
           const newQty = Number(phieuRow.quantity) + delta;
           if (newQty < 1) return;
           updatePhieuField(id, "qty", newQty);
-          // Cập nhật giá trị input trực tiếp không re-render toàn bộ
           const input = row.querySelector("[data-action='qty']");
           if (input) input.value = newQty;
         }
@@ -1513,6 +2820,7 @@
       }
     });
 
+    $("btn-export-csv").addEventListener("click", exportCSV);
     $("btn-xuat-sheets").addEventListener("click", openExportModal);
     $("btn-export-modal-cancel").addEventListener("click", closeExportModal);
     $("btn-export-modal-confirm").addEventListener("click", confirmExportToSheets);
@@ -1520,7 +2828,7 @@
       if (e.target === $("export-modal")) closeExportModal();
     });
 
-    // Quản lý xuất hàng
+    // Quản lý xuất hàng (Sheets)
     $("btn-reload-history").addEventListener("click", loadSheetHistory);
     $("history-search").addEventListener("input", renderHistory);
     $("history-filter-date").addEventListener("change", renderHistory);
@@ -1531,7 +2839,6 @@
     $("btn-history-delete").addEventListener("click", deleteSelectedRows);
     $("btn-export-sheets-csv").addEventListener("click", exportSheetsCSV);
 
-    // Checkbox chọn tất cả
     $("history-check-all").addEventListener("change", (e) => {
       const filtered = getFilteredHistory();
       if (e.target.checked) {
@@ -1542,7 +2849,6 @@
       renderHistory();
     });
 
-    // Checkbox từng dòng + nút Sửa (event delegation)
     $("history-body").addEventListener("change", (e) => {
       if (e.target.getAttribute("data-action") !== "rowcheck") return;
       const id = e.target.value;
@@ -1558,7 +2864,6 @@
       if (btn) openEditModal(btn.getAttribute("data-rowid"));
     });
 
-    // Mobile history cards
     $("history-cards").addEventListener("change", (e) => {
       if (e.target.getAttribute("data-action") !== "rowcheck") return;
       const id = e.target.value;
@@ -1574,31 +2879,322 @@
       if (btn) openEditModal(btn.getAttribute("data-rowid"));
     });
 
-    // Thống kê: nút Xem ngày
     ["stats-body", "stats-cards"].forEach((id) => {
       $(id).addEventListener("click", (e) => {
         const btn = e.target.closest("[data-action='filter-date']");
         if (!btn) return;
-        const date = btn.getAttribute("data-date"); // DD-MM-YYYY
-        // Chuyển DD-MM-YYYY → YYYY-MM-DD cho input[type=date]
+        const date = btn.getAttribute("data-date");
         const parts = date.split("-");
         if (parts.length === 3) {
           $("history-filter-date").value = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
         renderHistory();
-        // Scroll xuống section quản lý
         $("history-summary").closest("section").scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
+
     $("btn-edit-cancel").addEventListener("click", closeEditModal);
     $("btn-edit-save").addEventListener("click", saveEditModal);
     $("edit-modal").addEventListener("click", (e) => {
       if (e.target === $("edit-modal")) closeEditModal();
     });
 
+    if ($("btn-edit-qty-inc")) {
+      $("btn-edit-qty-inc").addEventListener("click", () => {
+        const inp = $("edit-quantity");
+        inp.value = Math.max(1, (Number(inp.value) || 0) + 1);
+      });
+    }
+    if ($("btn-edit-qty-dec")) {
+      $("btn-edit-qty-dec").addEventListener("click", () => {
+        const inp = $("edit-quantity");
+        const cur = Number(inp.value) || 1;
+        if (cur > 1) inp.value = cur - 1;
+      });
+    }
+
+    /* ---------- Sự kiện Chiết Hàng & Searchable Dropdowns ---------- */
+    // SP Nguồn Search
+    $("repackage-src-search").addEventListener("focus", (e) => {
+      renderRepackageSourceDropdown(e.target.value);
+    });
+    $("repackage-src-search").addEventListener("click", (e) => {
+      renderRepackageSourceDropdown(e.target.value);
+    });
+    $("repackage-src-search").addEventListener("input", (e) => {
+      renderRepackageSourceDropdown(e.target.value);
+    });
+    if ($("btn-repackage-src-change")) {
+      $("btn-repackage-src-change").addEventListener("click", () => clearRepackageSource(true));
+    }
+    if ($("btn-repackage-src-clear")) {
+      $("btn-repackage-src-clear").addEventListener("click", () => clearRepackageSource(true));
+    }
+
+    $("repackage-src-dropdown").addEventListener("mousedown", (e) => {
+      if (e.target.closest("[data-action='select-src-product']")) {
+        e.preventDefault();
+      }
+    });
+
+    $("repackage-src-dropdown").addEventListener("click", (e) => {
+      const item = e.target.closest("[data-action='select-src-product']");
+      if (!item) return;
+      selectRepackageSourceProduct(item.getAttribute("data-masp"));
+    });
+
+    $("btn-repackage-src-qty-inc").addEventListener("click", () => {
+      const input = $("repackage-source-qty");
+      input.value = Number(((Number(input.value) || 0) + 1).toFixed(2));
+      updateRepackageSummary();
+    });
+    $("btn-repackage-src-qty-dec").addEventListener("click", () => {
+      const input = $("repackage-source-qty");
+      const next = Number(input.value || 1) - 1;
+      if (next >= 1) {
+        input.value = Number(next.toFixed(2));
+        updateRepackageSummary();
+      }
+    });
+    $("repackage-source-qty").addEventListener("input", updateRepackageSummary);
+
+    $("btn-repackage-add-target").addEventListener("click", addRepackageTargetRow);
+    $("btn-repackage-reset").addEventListener("click", resetRepackageForm);
+    $("btn-repackage-save-sheets").addEventListener("click", openRepackageModal);
+    $("btn-repackage-modal-cancel").addEventListener("click", closeRepackageModal);
+    $("btn-repackage-modal-confirm").addEventListener("click", confirmRepackageToSheets);
+    $("repackage-export-modal").addEventListener("click", (e) => {
+      if (e.target === $("repackage-export-modal")) closeRepackageModal();
+    });
+
+    if ($("btn-repackage-edit-fromqty-inc")) {
+      $("btn-repackage-edit-fromqty-inc").addEventListener("click", () => {
+        const inp = $("repackage-edit-fromqty");
+        inp.value = Number(((Number(inp.value) || 0) + 1).toFixed(2));
+      });
+    }
+    if ($("btn-repackage-edit-fromqty-dec")) {
+      $("btn-repackage-edit-fromqty-dec").addEventListener("click", () => {
+        const inp = $("repackage-edit-fromqty");
+        const cur = Number(inp.value) || 1;
+        if (cur > 1) inp.value = Number((cur - 1).toFixed(2));
+      });
+    }
+
+    if ($("repackage-edit-targets-container")) {
+      $("repackage-edit-targets-container").addEventListener("click", (e) => {
+        const inc = e.target.closest("[data-action='repack-edit-qty-inc']");
+        if (inc) {
+          const rowDiv = inc.closest("[data-target-row-id]");
+          const inp = rowDiv ? rowDiv.querySelector(".repack-edit-item-qty") : null;
+          if (inp) inp.value = Number(((Number(inp.value) || 0) + 1).toFixed(2));
+          return;
+        }
+        const dec = e.target.closest("[data-action='repack-edit-qty-dec']");
+        if (dec) {
+          const rowDiv = dec.closest("[data-target-row-id]");
+          const inp = rowDiv ? rowDiv.querySelector(".repack-edit-item-qty") : null;
+          if (inp) {
+            const cur = Number(inp.value) || 1;
+            if (cur > 1) inp.value = Number((cur - 1).toFixed(2));
+          }
+          return;
+        }
+      });
+    }
+
+    // Delegations cho SP Đích (Search, Select, Qty, Note, Delete)
+    ["repackage-targets-body", "repackage-targets-cards"].forEach((id) => {
+      const container = $(id);
+      if (!container) return;
+
+      const triggerTargetSearch = (e) => {
+        if (e.target.getAttribute("data-action") === "target-search") {
+          const targetId = e.target.getAttribute("data-targetid");
+          showTargetSearchDropdown(targetId, e.target.value);
+        }
+      };
+
+      container.addEventListener("focusin", triggerTargetSearch);
+      
+      // Ngăn blur bàn phím làm ẩn dropdown trước khi click kịp ghi nhận trên mobile
+      container.addEventListener("mousedown", (e) => {
+        if (e.target.closest("[data-action='select-target-product']")) {
+          e.preventDefault();
+        }
+      });
+
+      container.addEventListener("click", (e) => {
+        // Mở dropdown khi click/tap vào ô tìm kiếm trên mobile hoặc desktop
+        if (e.target.getAttribute("data-action") === "target-search") {
+          const targetId = e.target.getAttribute("data-targetid");
+          showTargetSearchDropdown(targetId, e.target.value);
+          return;
+        }
+
+        // Chọn SP từ dropdown
+        const selectItem = e.target.closest("[data-action='select-target-product']");
+        if (selectItem) {
+          const targetId = selectItem.getAttribute("data-targetid");
+          const maSP = selectItem.getAttribute("data-masp");
+          selectRepackageTargetProduct(targetId, maSP);
+          return;
+        }
+
+        // Tăng số lượng đích
+        const incBtn = e.target.closest("[data-action='target-qty-inc']");
+        if (incBtn) {
+          const targetId = incBtn.getAttribute("data-targetid");
+          const row = state.repackage.targets.find((t) => t.id === targetId);
+          if (row) {
+            row.quantity = Number(((Number(row.quantity) || 0) + 1).toFixed(2));
+            renderRepackageTargets();
+          }
+          return;
+        }
+
+        // Giảm số lượng đích
+        const decBtn = e.target.closest("[data-action='target-qty-dec']");
+        if (decBtn) {
+          const targetId = decBtn.getAttribute("data-targetid");
+          const row = state.repackage.targets.find((t) => t.id === targetId);
+          if (row) {
+            const cur = Number(row.quantity) || 1;
+            const next = cur > 1 ? cur - 1 : (cur > 0.1 ? Number((cur - 0.1).toFixed(2)) : 0.1);
+            row.quantity = Math.max(0.01, Number(next.toFixed(2)));
+            renderRepackageTargets();
+          }
+          return;
+        }
+
+        // Đổi / Xóa chọn SP của dòng
+        const clearBtn = e.target.closest("[data-action='target-clear-product']");
+        if (clearBtn) {
+          const targetId = clearBtn.getAttribute("data-targetid");
+          const row = state.repackage.targets.find((t) => t.id === targetId);
+          if (row) {
+            row.productId = "";
+            renderRepackageTargets();
+            setTimeout(() => {
+              const isMobile = window.innerWidth < 640;
+              const selector = isMobile
+                ? `#repackage-targets-cards [data-targetid="${targetId}"] [data-action="target-search"]`
+                : `#repackage-targets-body [data-targetid="${targetId}"] [data-action="target-search"]`;
+              const inp = document.querySelector(selector);
+              if (inp) {
+                inp.focus();
+                showTargetSearchDropdown(targetId, "");
+              }
+            }, 50);
+          }
+          return;
+        }
+
+        // Xóa dòng đích
+        const deleteBtn = e.target.closest("[data-action='target-delete']");
+        if (deleteBtn) {
+          const targetId = deleteBtn.getAttribute("data-targetid");
+          removeRepackageTargetRow(targetId);
+        }
+      });
+
+      container.addEventListener("input", (e) => {
+        const action = e.target.getAttribute("data-action");
+        const targetId = e.target.getAttribute("data-targetid");
+        if (action === "target-search") {
+          showTargetSearchDropdown(targetId, e.target.value);
+        } else if (action === "target-qty") {
+          updateRepackageTargetField(targetId, "quantity", e.target.value);
+        } else if (action === "target-note") {
+          updateRepackageTargetField(targetId, "note", e.target.value);
+        }
+      });
+    });
+
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener("click", (e) => {
+      // SP Nguồn
+      if (!e.target.closest("#repackage-src-search") && !e.target.closest("#repackage-src-dropdown")) {
+        $("repackage-src-dropdown").classList.add("hidden");
+      }
+      // SP Đích
+      if (!e.target.closest("[data-action='target-search']") && !e.target.closest("[data-dropdown-for]")) {
+        document.querySelectorAll("[data-dropdown-for]").forEach((el) => el.classList.add("hidden"));
+        document.querySelectorAll("#repackage-targets-body tr, #repackage-targets-cards > div").forEach((el) => {
+          el.classList.remove("z-50");
+        });
+      }
+    });
+
+    // Lịch sử chiết hàng
+    $("btn-repackage-reload-history").addEventListener("click", loadRepackageHistory);
+    $("repackage-history-search").addEventListener("input", renderRepackageHistory);
+    $("repackage-history-filter-date").addEventListener("change", renderRepackageHistory);
+    $("btn-repackage-clear-date").addEventListener("click", () => {
+      $("repackage-history-filter-date").value = "";
+      renderRepackageHistory();
+    });
+    $("btn-repackage-delete-selected").addEventListener("click", deleteSelectedRepackageRows);
+
+    $("repackage-history-check-all").addEventListener("change", (e) => {
+      const filtered = getFilteredRepackageSessions();
+      if (e.target.checked) {
+        filtered.forEach((s) => repackageSelected.add(s.sessionId));
+      } else {
+        filtered.forEach((s) => repackageSelected.delete(s.sessionId));
+      }
+      renderRepackageHistory();
+    });
+
+    $("repackage-history-body").addEventListener("change", (e) => {
+      if (e.target.getAttribute("data-action") !== "repackcheck") return;
+      const id = e.target.value;
+      if (e.target.checked) repackageSelected.add(id);
+      else repackageSelected.delete(id);
+      updateRepackageSelectionUI();
+      const tr = e.target.closest("tr");
+      if (tr) tr.classList.toggle("bg-pine-50", e.target.checked);
+    });
+
+    $("repackage-history-body").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='repack-edit']");
+      if (btn) {
+        const sid = btn.getAttribute("data-sessionid") || btn.getAttribute("data-repackid");
+        openRepackageEditModal(sid);
+      }
+    });
+
+    $("repackage-history-cards").addEventListener("change", (e) => {
+      if (e.target.getAttribute("data-action") !== "repackcheck") return;
+      const id = e.target.value;
+      if (e.target.checked) repackageSelected.add(id);
+      else repackageSelected.delete(id);
+      updateRepackageSelectionUI();
+      const card = e.target.closest(".p-4");
+      if (card) card.classList.toggle("bg-pine-50", e.target.checked);
+    });
+
+    $("repackage-history-cards").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='repack-edit']");
+      if (btn) {
+        const sid = btn.getAttribute("data-sessionid") || btn.getAttribute("data-repackid");
+        openRepackageEditModal(sid);
+      }
+    });
+
+    const btnRepackEditClose = $("btn-repackage-edit-close");
+    if (btnRepackEditClose) btnRepackEditClose.addEventListener("click", closeRepackageEditModal);
+    $("btn-repackage-edit-cancel").addEventListener("click", closeRepackageEditModal);
+    $("btn-repackage-edit-save").addEventListener("click", saveRepackageEditModal);
+    $("repackage-edit-modal").addEventListener("click", (e) => {
+      if (e.target === $("repackage-edit-modal")) closeRepackageEditModal();
+    });
+
+    // Khởi tạo ứng dụng
     renderPhieu();
     loadProducts();
     loadSheetHistory();
+    loadRepackageHistory();
 
     // Đăng ký Service Worker
     if ("serviceWorker" in navigator) {
@@ -1606,7 +3202,7 @@
         .catch((err) => console.warn("SW registration failed:", err));
     }
 
-    // Pull-to-refresh (chỉ hoạt động ở chế độ standalone PWA)
+    // Pull-to-refresh
     if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone) {
       let startY = 0;
       let pulling = false;
@@ -1617,7 +3213,6 @@
       const ptrIcon = document.getElementById("ptr-icon");
 
       document.addEventListener("touchstart", (e) => {
-        // Không trigger nếu đang chạm vào scrollable container bên trong
         const scrollable = e.target.closest(".scroll-thin, .overflow-x-auto, .overflow-y-auto");
         if (window.scrollY === 0 && !isReloading && !scrollable) {
           startY = e.touches[0].clientY;
