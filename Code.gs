@@ -46,28 +46,37 @@ function doGet(e) {
     // 1. Trả về dữ liệu tab CHIẾT HÀNG
     if (type === "repackage") {
       var ssRepack = SpreadsheetApp.getActiveSpreadsheet();
-      var sheetRepack = ssRepack.getSheetByName(SHEET_NAME_REPACKAGE);
+      var sheetRepack = ssRepack.getSheetByName(SHEET_NAME_REPACKAGE) || ssRepack.getSheetByName("repackage_history");
 
       if (!sheetRepack || sheetRepack.getLastRow() <= 1) {
         return jsonResponse({ status: "ok", repackageRows: [] });
       }
 
       var lastRowR = sheetRepack.getLastRow();
-      var dataR    = sheetRepack.getRange(2, 1, lastRowR - 1, HEADER_REPACKAGE.length).getValues();
+      var lastColR = sheetRepack.getLastColumn();
+      var headerRow = sheetRepack.getRange(1, 1, 1, lastColR).getValues()[0].map(function(h) { return String(h).trim(); });
+      var dataR    = sheetRepack.getRange(2, 1, lastRowR - 1, lastColR).getValues();
 
       var repackageRows = dataR.map(function(row) {
         var obj = {};
-        HEADER_REPACKAGE.forEach(function(key, i) {
+        headerRow.forEach(function(key, i) {
+          if (!key) return;
           var val = row[i];
           if (key === "date") {
             val = normalizeDateString(val);
           } else if (key === "fromQuantity" || key === "sessionFromQty" || key === "toQuantity" || key === "createdAt" || key === "updatedAt") {
-            val = val !== "" && !isNaN(val) ? Number(val) : val;
+            val = val !== "" && !isNaN(val) ? Number(val) : (val === "" ? 0 : val);
           } else {
             val = val !== undefined ? String(val) : "";
           }
           obj[key] = val;
         });
+
+        // Tương thích ngược nếu sheet cũ chưa có cột sessionFromQty
+        if (obj.sessionFromQty === undefined || obj.sessionFromQty === "") {
+          obj.sessionFromQty = Number(obj.fromQuantity) || 0;
+        }
+
         return obj;
       });
 
@@ -83,11 +92,14 @@ function doGet(e) {
     }
 
     var lastRow = sheet.getLastRow();
-    var data    = sheet.getRange(2, 1, lastRow - 1, HEADER_PHIEUXUAT.length).getValues();
+    var lastCol = sheet.getLastColumn();
+    var headerRowX = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var data    = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
 
     var rows = data.map(function(row) {
       var obj = {};
-      HEADER_PHIEUXUAT.forEach(function(key, i) {
+      headerRowX.forEach(function(key, i) {
+        if (!key) return;
         var val = row[i];
         if (key === "date") {
           val = normalizeDateString(val);
@@ -148,11 +160,15 @@ function actionAppend(payload) {
 
   try {
     var sheet = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
 
     var existingIds = {};
-    var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      var idValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      var idColIdx = headers.indexOf("id");
+      if (idColIdx === -1) idColIdx = 0;
+      var idValues = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
       idValues.forEach(function(r) {
         var cleanId = String(r[0]).replace(/^'+/, '').trim();
         existingIds[cleanId] = true;
@@ -165,7 +181,7 @@ function actionAppend(payload) {
         return cleanId && !existingIds[cleanId];
       })
       .map(function(row) {
-        return HEADER_PHIEUXUAT.map(function(key) {
+        return headers.map(function(key) {
           return row[key] !== undefined ? row[key] : "";
         });
       });
@@ -175,8 +191,12 @@ function actionAppend(payload) {
     }
 
     var insertAt = sheet.getLastRow() + 1;
-    sheet.getRange(insertAt, 1, newRows.length, HEADER_PHIEUXUAT.length).setValues(newRows);
-    sheet.getRange(insertAt, 2, newRows.length, 1).setNumberFormat("@");
+    sheet.getRange(insertAt, 1, newRows.length, headers.length).setValues(newRows);
+    
+    var dateColIdx = headers.indexOf("date");
+    if (dateColIdx !== -1) {
+      sheet.getRange(insertAt, dateColIdx + 1, newRows.length, 1).setNumberFormat("@");
+    }
 
     return jsonResponse({ status: "ok", message: "Đã ghi " + newRows.length + " dòng.", rowsWritten: newRows.length });
   } finally {
@@ -204,7 +224,12 @@ function actionDelete(payload) {
       return jsonResponse({ status: "ok", message: "Sheet đang trống.", rowsDeleted: 0 });
     }
 
-    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var idColIdx = headers.indexOf("id");
+    if (idColIdx === -1) idColIdx = 0;
+
+    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
     var idSet = {};
     ids.forEach(function(id) {
       var clean = String(id).replace(/^'+/, '').trim();
@@ -246,7 +271,12 @@ function actionUpdate(payload) {
       return jsonResponse({ status: "error", message: "Không tìm thấy dòng id=" + row.id });
     }
 
-    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var idColIdx = headers.indexOf("id");
+    if (idColIdx === -1) idColIdx = 0;
+
+    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
     var targetRow = -1;
     var searchId = String(row.id).replace(/^'+/, '').trim();
     for (var i = 0; i < idCol.length; i++) {
@@ -261,18 +291,22 @@ function actionUpdate(payload) {
       return jsonResponse({ status: "error", message: "Không tìm thấy dòng id=" + row.id });
     }
 
-    var currentValues = sheet.getRange(targetRow, 1, 1, HEADER_PHIEUXUAT.length).getValues()[0];
-    var currentRow = {};
-    HEADER_PHIEUXUAT.forEach(function(key, i) { currentRow[key] = currentValues[i]; });
+    var currentValues = sheet.getRange(targetRow, 1, 1, lastCol).getValues()[0];
+    var rowObj = {};
+    headers.forEach(function(h, idx) { rowObj[h] = currentValues[idx]; });
 
     var EDITABLE = ["date", "quantity", "sellingPrice", "purchasePrice", "note", "updatedAt"];
     EDITABLE.forEach(function(key) {
-      if (row[key] !== undefined) currentRow[key] = row[key];
+      if (row[key] !== undefined) rowObj[key] = row[key];
     });
 
-    var updatedValues = HEADER_PHIEUXUAT.map(function(key) { return currentRow[key]; });
-    sheet.getRange(targetRow, 1, 1, HEADER_PHIEUXUAT.length).setValues([updatedValues]);
-    sheet.getRange(targetRow, 2, 1, 1).setNumberFormat("@");
+    var updatedValues = headers.map(function(key) { return rowObj[key]; });
+    sheet.getRange(targetRow, 1, 1, lastCol).setValues([updatedValues]);
+
+    var dateColIdx = headers.indexOf("date");
+    if (dateColIdx !== -1) {
+      sheet.getRange(targetRow, dateColIdx + 1, 1, 1).setNumberFormat("@");
+    }
 
     return jsonResponse({ status: "ok", message: "Đã cập nhật dòng id=" + row.id });
   } finally {
@@ -299,11 +333,22 @@ function actionRepackage(payload) {
 
   try {
     var sheet = getOrCreateSheet(SHEET_NAME_REPACKAGE, HEADER_REPACKAGE);
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+
+    // Đảm bảo có cột sessionFromQty
+    if (headers.indexOf("sessionFromQty") === -1) {
+      sheet.getRange(1, lastCol + 1).setValue("sessionFromQty");
+      headers.push("sessionFromQty");
+      lastCol = headers.length;
+    }
 
     var existingIds = {};
-    var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      var idValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      var idColIdx = headers.indexOf("id");
+      if (idColIdx === -1) idColIdx = 0;
+      var idValues = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
       idValues.forEach(function(r) {
         var cleanId = String(r[0]).replace(/^'+/, '').trim();
         existingIds[cleanId] = true;
@@ -316,8 +361,13 @@ function actionRepackage(payload) {
         return cleanId && !existingIds[cleanId];
       })
       .map(function(row) {
-        return HEADER_REPACKAGE.map(function(key) {
-          return row[key] !== undefined ? row[key] : "";
+        return headers.map(function(key) {
+          var val = row[key];
+          if (val === undefined) {
+            if (key === "sessionFromQty") return row["fromQuantity"] !== undefined ? row["fromQuantity"] : 0;
+            return "";
+          }
+          return val;
         });
       });
 
@@ -326,8 +376,12 @@ function actionRepackage(payload) {
     }
 
     var insertAt = sheet.getLastRow() + 1;
-    sheet.getRange(insertAt, 1, newRows.length, HEADER_REPACKAGE.length).setValues(newRows);
-    sheet.getRange(insertAt, 3, newRows.length, 1).setNumberFormat("@"); // Cột date
+    sheet.getRange(insertAt, 1, newRows.length, headers.length).setValues(newRows);
+
+    var dateColIdx = headers.indexOf("date");
+    if (dateColIdx !== -1) {
+      sheet.getRange(insertAt, dateColIdx + 1, newRows.length, 1).setNumberFormat("@");
+    }
 
     return jsonResponse({ status: "ok", message: "Đã ghi " + newRows.length + " dòng chiết hàng.", rowsWritten: newRows.length });
   } finally {
@@ -355,7 +409,12 @@ function actionRepackageDelete(payload) {
       return jsonResponse({ status: "ok", message: "Sheet chiết hàng đang trống.", rowsDeleted: 0 });
     }
 
-    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var idColIdx = headers.indexOf("id");
+    if (idColIdx === -1) idColIdx = 0;
+
+    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
     var idSet = {};
     ids.forEach(function(id) {
       var clean = String(id).replace(/^'+/, '').trim();
@@ -403,7 +462,21 @@ function actionRepackageUpdate(payload) {
       return jsonResponse({ status: "error", message: "Sheet chiết hàng đang trống." });
     }
 
-    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+
+    // Đảm bảo có cột sessionFromQty trong headers
+    var sessionFromQtyColIdx = headers.indexOf("sessionFromQty");
+    if (sessionFromQtyColIdx === -1) {
+      sheet.getRange(1, lastCol + 1).setValue("sessionFromQty");
+      headers.push("sessionFromQty");
+      lastCol = headers.length;
+    }
+
+    var idColIdx = headers.indexOf("id");
+    if (idColIdx === -1) idColIdx = 0;
+
+    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
     var idToRowIndex = {};
     for (var i = 0; i < idCol.length; i++) {
       var rawId = String(idCol[i][0]).replace(/^'+/, '').trim();
@@ -411,7 +484,6 @@ function actionRepackageUpdate(payload) {
     }
 
     var updatedCount = 0;
-    var EDITABLE = ["date", "fromQuantity", "sessionFromQty", "toQuantity", "note", "updatedAt"];
 
     rowsToUpdate.forEach(function(row) {
       if (!row || !row.id) return;
@@ -419,17 +491,28 @@ function actionRepackageUpdate(payload) {
       var targetRow = idToRowIndex[targetId];
       if (!targetRow) return;
 
-      var currentValues = sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).getValues()[0];
-      var currentRow = {};
-      HEADER_REPACKAGE.forEach(function(key, k) { currentRow[key] = currentValues[k]; });
+      var currentValues = sheet.getRange(targetRow, 1, 1, lastCol).getValues()[0];
+      var rowObj = {};
+      headers.forEach(function(h, idx) { rowObj[h] = currentValues[idx]; });
 
-      EDITABLE.forEach(function(key) {
-        if (row[key] !== undefined) currentRow[key] = row[key];
+      // Cập nhật các trường
+      if (row.date !== undefined)           rowObj["date"] = row.date;
+      if (row.fromQuantity !== undefined)   rowObj["fromQuantity"] = Number(row.fromQuantity);
+      if (row.sessionFromQty !== undefined) rowObj["sessionFromQty"] = Number(row.sessionFromQty);
+      if (row.toQuantity !== undefined)     rowObj["toQuantity"] = Number(row.toQuantity);
+      if (row.note !== undefined)           rowObj["note"] = String(row.note);
+      if (row.updatedAt !== undefined)      rowObj["updatedAt"] = Number(row.updatedAt);
+
+      var newRowValues = headers.map(function(h) {
+        return rowObj[h] !== undefined ? rowObj[h] : "";
       });
 
-      var updatedValues = HEADER_REPACKAGE.map(function(key) { return currentRow[key]; });
-      sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).setValues([updatedValues]);
-      sheet.getRange(targetRow, 3, 1, 1).setNumberFormat("@"); // Cột date dạng text
+      sheet.getRange(targetRow, 1, 1, lastCol).setValues([newRowValues]);
+
+      var dateColIdx = headers.indexOf("date");
+      if (dateColIdx !== -1) {
+        sheet.getRange(targetRow, dateColIdx + 1, 1, 1).setNumberFormat("@");
+      }
       updatedCount++;
     });
 

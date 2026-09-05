@@ -2408,15 +2408,21 @@
             date: r.date,
             fromProductId: r.fromProductId,
             fromProductName: r.fromProductName,
-            fromQuantity: r.sessionFromQty !== undefined ? Number(r.sessionFromQty) : (Number(r.fromQuantity) || 0),
+            fromQuantity: 0,
+            sessionFromQty: 0,
             createdAt: r.createdAt || 0,
             updatedAt: r.updatedAt || 0,
             items: []
           });
         }
         const session = map.get(key);
-        if (session.fromQuantity === 0 && Number(r.fromQuantity) > 0) {
-          session.fromQuantity = Number(r.fromQuantity);
+        const itemFromQty = Number(r.fromQuantity) || 0;
+        const itemSessionQty = Number(r.sessionFromQty) || 0;
+        if (itemSessionQty > 0) {
+          session.fromQuantity = itemSessionQty;
+          session.sessionFromQty = itemSessionQty;
+        } else if (itemFromQty > 0 && session.fromQuantity === 0) {
+          session.fromQuantity = itemFromQty;
         }
         session.items.push(r);
       });
@@ -2678,7 +2684,8 @@
         const dateFormatted = dateIso ? formatNgayXuat(dateIso) : undefined;
 
         targetUpdates.forEach((tu, idx) => {
-          const row = repackageHistory.find((r) => r.id === tu.id);
+          const cleanTuId = String(tu.id).replace(/^'+/, '').trim();
+          const row = repackageHistory.find((r) => String(r.id).replace(/^'+/, '').trim() === cleanTuId);
           if (row) {
             if (dateFormatted) row.date = dateFormatted;
             row.fromQuantity = idx === 0 ? fromQty : 0;

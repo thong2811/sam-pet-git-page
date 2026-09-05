@@ -1,4 +1,4 @@
-const CACHE_NAME = "sam-pet-v27";
+const CACHE_NAME = "sam-pet-v28";
 const ASSETS = [
   "./",
   "./index.html",
