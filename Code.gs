@@ -42,6 +42,12 @@ var HEADER_REPACKAGE = [
 function doGet(e) {
   try {
     var type = (e && e.parameter && e.parameter.type) ? e.parameter.type : "";
+    var lockDate = getGlobalLockDate();
+
+    // Trả về riêng ngày khóa
+    if (type === "get_lock_date") {
+      return jsonResponse({ status: "ok", lockDate: lockDate });
+    }
 
     // 1. Trả về dữ liệu tab CHIẾT HÀNG
     if (type === "repackage") {
@@ -49,7 +55,7 @@ function doGet(e) {
       var sheetRepack = ssRepack.getSheetByName(SHEET_NAME_REPACKAGE) || ssRepack.getSheetByName("repackage_history");
 
       if (!sheetRepack || sheetRepack.getLastRow() <= 1) {
-        return jsonResponse({ status: "ok", repackageRows: [] });
+        return jsonResponse({ status: "ok", lockDate: lockDate, repackageRows: [] });
       }
 
       var lastRowR = sheetRepack.getLastRow();
@@ -80,7 +86,7 @@ function doGet(e) {
         return obj;
       });
 
-      return jsonResponse({ status: "ok", repackageRows: repackageRows });
+      return jsonResponse({ status: "ok", lockDate: lockDate, repackageRows: repackageRows });
     }
 
     // 2. Trả về dữ liệu tab XUẤT HÀNG (Mặc định)
@@ -88,7 +94,7 @@ function doGet(e) {
     var sheet = ss.getSheetByName(SHEET_NAME_PHIEUXUAT);
 
     if (!sheet || sheet.getLastRow() <= 1) {
-      return jsonResponse({ status: "ok", rows: [] });
+      return jsonResponse({ status: "ok", lockDate: lockDate, rows: [] });
     }
 
     var lastRow = sheet.getLastRow();
@@ -111,7 +117,7 @@ function doGet(e) {
       return obj;
     });
 
-    return jsonResponse({ status: "ok", rows: rows });
+    return jsonResponse({ status: "ok", lockDate: lockDate, rows: rows });
 
   } catch (err) {
     return jsonResponse({ status: "error", message: err.toString(), rows: [], repackageRows: [] });
@@ -123,6 +129,23 @@ function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
     var action  = payload.action || "append";
+
+    // Router Khóa Ngày Sổ Sách (Lưu vào tab CaiDat và ScriptProperties)
+    if (action === "set_lock_date") {
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(LOCK_TIMEOUT_MS);
+      } catch (e) {
+        return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+      }
+      try {
+        var newLockDate = String(payload.lockDate || "").trim();
+        setGlobalLockDate(newLockDate);
+        return jsonResponse({ status: "ok", message: "Đã cập nhật ngày khóa sổ thành công.", lockDate: newLockDate });
+      } finally {
+        lock.releaseLock();
+      }
+    }
 
     // Router Xuất Hàng
     if (action === "append") return actionAppend(payload);
@@ -556,6 +579,72 @@ function normalizeDateString(val) {
     }
   }
   return s;
+}
+
+function getGlobalLockDate() {
+  // 1. Đọc từ tab "CaiDat" nếu có
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_NAME_CONFIG);
+    if (sheet && sheet.getLastRow() > 1) {
+      var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues();
+      for (var i = 0; i < data.length; i++) {
+        var k = String(data[i][0] || "").trim().toLowerCase();
+        if (k === "lock_date" || k === "ngay_khoa") {
+          var val = normalizeDateString(data[i][1]);
+          if (val) {
+            var parts = String(val).split("-");
+            if (parts.length === 3 && parts[2].length === 4) {
+              return parts[2] + "-" + parts[1] + "-" + parts[0]; // DD-MM-YYYY -> YYYY-MM-DD
+            }
+            return String(val);
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 2. Fallback sang ScriptProperties
+  try {
+    return PropertiesService.getScriptProperties().getProperty("LOCK_DATE") || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function setGlobalLockDate(isoDate) {
+  var cleanDate = String(isoDate || "").trim();
+
+  // 1. Lưu vào ScriptProperties
+  try {
+    if (cleanDate) {
+      PropertiesService.getScriptProperties().setProperty("LOCK_DATE", cleanDate);
+    } else {
+      PropertiesService.getScriptProperties().deleteProperty("LOCK_DATE");
+    }
+  } catch (e) {}
+
+  // 2. Lưu trực quan vào tab "CaiDat" trên Google Sheet
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_CONFIG, HEADER_CONFIG);
+    var lastRow = sheet.getLastRow();
+    var found = false;
+    if (lastRow > 1) {
+      var keys = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (var i = 0; i < keys.length; i++) {
+        var k = String(keys[i][0] || "").trim().toLowerCase();
+        if (k === "lock_date" || k === "ngay_khoa") {
+          sheet.getRange(i + 2, 2).setValue(cleanDate ? "'" + cleanDate : "");
+          sheet.getRange(i + 2, 3).setValue(Math.floor(Date.now() / 1000));
+          found = true;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      sheet.appendRow(["lock_date", cleanDate ? "'" + cleanDate : "", Math.floor(Date.now() / 1000)]);
+    }
+  } catch (e) {}
 }
 
 function jsonResponse(obj) {

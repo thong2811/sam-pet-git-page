@@ -152,8 +152,17 @@
         </button>
       </div>
 
-      <!-- Status chips -->
+      <!-- Status chips & Lock Date -->
       <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+        <button id="btn-open-lock-date-modal" type="button"
+          class="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 px-3 py-1.5 transition-all border border-white/15 cursor-pointer shadow-xs">
+          <span id="lock-date-header-icon" class="inline-flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+          </span>
+          <span id="lock-date-header-text" class="text-xs font-medium text-pine-100">Khóa ngày</span>
+        </button>
         <span id="status-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
           <span class="h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
           Đang tải sản phẩm…
@@ -608,7 +617,11 @@
     <!-- Modal sửa dòng xuất hàng -->
     <div id="edit-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
       <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 space-y-4">
-        <h3 class="text-base font-semibold text-pine-800">Cập nhật thông tin xuất hàng</h3>
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-semibold text-pine-800">Cập nhật thông tin xuất hàng</h3>
+          <button id="btn-edit-close" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
+        </div>
+        <div id="edit-modal-locked-warning" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium leading-relaxed"></div>
         <input type="hidden" id="edit-id" />
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -758,6 +771,7 @@
           <h3 class="text-base font-semibold text-pine-800">Cập nhật phiếu chiết hàng</h3>
           <button id="btn-repackage-edit-close" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
         </div>
+        <div id="repackage-edit-modal-locked-warning" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium leading-relaxed"></div>
         <input type="hidden" id="repackage-edit-sessionid" />
         
         <div>
@@ -800,6 +814,54 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal cài đặt Khóa ngày sổ sách -->
+    <div id="lock-date-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div class="bg-white rounded-2xl shadow-lift w-full max-w-sm p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2 text-pine-800">
+            <span class="p-2 bg-amber-100 rounded-xl text-amber-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+              </svg>
+            </span>
+            <h3 class="text-base font-semibold">Khóa Ngày Sổ Sách</h3>
+          </div>
+          <button id="btn-lock-date-close" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
+        </div>
+
+        <div class="bg-amber-50/80 rounded-xl p-3.5 space-y-1.5 text-xs text-amber-900 border border-amber-200/60 leading-relaxed">
+          <p class="font-semibold flex items-center gap-1.5 text-amber-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Quy tắc khóa ngày:
+          </p>
+          <p>Khi bạn chọn <strong>Ngày A</strong>, tất cả dữ liệu từ ngày A trở về trước sẽ bị khóa cứng: không thể thêm phiếu xuất, chiết hàng, sửa hoặc xóa dữ liệu cũ.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1.5">Chọn ngày mốc khóa sổ (Khóa &le; ngày này)</label>
+          <input id="lock-date-input" type="date"
+            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+          <p id="lock-date-status-desc" class="text-[11px] text-slate-500 mt-1.5"></p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1.5">Mã PIN xác thực <span class="text-red-500">*</span></label>
+          <input id="lock-date-pin" type="password" maxlength="10" inputmode="numeric" placeholder="Nhập mã PIN để xác nhận…"
+            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink tracking-widest" />
+          <p class="text-[11px] text-slate-400 mt-1">Cần nhập đúng mã PIN để thực hiện khóa hoặc mở khóa sổ sách.</p>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2 border-t border-slate-100">
+          <button id="btn-lock-date-clear" type="button"
+            class="rounded-xl border border-red-200 text-red-600 hover:bg-red-50 px-3.5 py-2 text-xs font-medium">Mở khóa (Hủy)</button>
+          <button id="btn-lock-date-save" type="button"
+            class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-xs font-medium shadow-card">Lưu ngày khóa</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[min(22rem,calc(100%-2rem))]"></div>
@@ -808,6 +870,7 @@
     /* ========== Trạng thái Chung & Xuất Hàng ========== */
     const state = {
       activeTab: "xuat",
+      lockDate: "", // Đồng bộ từ Google Apps Script PropertiesService
       products: [],
       columns: [],
       keys: { maSP: null, tenSP: null, donVi: null, giaBan: null, giaNhap: null, initStock: null, repackageStock: null },
@@ -912,6 +975,129 @@
       if (!iso) return "";
       const [y, m, d] = iso.split("-");
       return `${d}-${m}-${y}`;
+    }
+
+    /* ========== Quản lý Khóa Ngày Sổ Sách (Lock Date) ========== */
+    const LOCK_DATE_PIN = "110899";
+
+    function toYMD(dateStr) {
+      if (!dateStr) return "";
+      const s = String(dateStr).trim();
+      const parts = s.split("-");
+      if (parts.length === 3) {
+        if (parts[0].length === 4) return s; // YYYY-MM-DD
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY -> YYYY-MM-DD
+      }
+      return s;
+    }
+
+    function getLockDate() {
+      return state.lockDate || "";
+    }
+
+    function setLockDate(isoDate) {
+      state.lockDate = isoDate ? toYMD(isoDate) : "";
+      updateLockDateUI();
+    }
+
+    function isDateLocked(dateStr) {
+      const lockDate = getLockDate();
+      if (!lockDate || !dateStr) return false;
+      const ymd = toYMD(dateStr);
+      const lockYmd = toYMD(lockDate);
+      return ymd <= lockYmd;
+    }
+
+    function formatLockDateVN(iso) {
+      if (!iso) return "";
+      return formatNgayXuat(toYMD(iso));
+    }
+
+    function getMinAllowedDate() {
+      const lock = getLockDate();
+      if (!lock) return "";
+      const d = new Date(toYMD(lock));
+      d.setDate(d.getDate() + 1);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function setLockDateLoading(isLoading) {
+      const textEl = $("lock-date-header-text");
+      const iconEl = $("lock-date-header-icon");
+      const descEl = $("lock-date-status-desc");
+
+      if (isLoading) {
+        if (textEl) textEl.textContent = "Đang kiểm tra…";
+        if (iconEl) {
+          iconEl.innerHTML = `<svg class="animate-spin h-3.5 w-3.5 text-amber-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>`;
+        }
+        if (descEl) {
+          descEl.innerHTML = `<span class="inline-flex items-center gap-1.5 text-slate-500 font-medium"><span class="w-3.5 h-3.5 border-2 border-pine-500 border-t-transparent rounded-full animate-spin"></span> Đang đồng bộ ngày khóa từ máy chủ…</span>`;
+        }
+      } else {
+        if (iconEl) {
+          iconEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>`;
+        }
+        updateLockDateUI();
+      }
+    }
+
+    async function fetchLockDate() {
+      setLockDateLoading(true);
+      try {
+        const res = await fetch(SHEETS_URL + "?type=get_lock_date");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.status === "ok" && data.lockDate !== undefined) {
+            state.lockDate = data.lockDate ? toYMD(data.lockDate) : "";
+          }
+        }
+      } catch (err) {
+        console.warn("Lỗi khi tải ngày khóa:", err);
+      } finally {
+        setLockDateLoading(false);
+      }
+    }
+
+    function updateLockDateUI() {
+      const lock = getLockDate();
+      const textEl = $("lock-date-header-text");
+      const descEl = $("lock-date-status-desc");
+      const inputEl = $("lock-date-input");
+      const btnOpen = $("btn-open-lock-date-modal");
+
+      if (lock) {
+        const vnDate = formatLockDateVN(lock);
+        if (textEl) textEl.textContent = `Khóa: ≤ ${vnDate}`;
+        if (descEl) descEl.innerHTML = `<span class="text-amber-700 font-semibold">Đang khóa sổ đến: ${vnDate}</span> (Không thể thêm/sửa/xóa từ ngày này trở về trước).`;
+        if (inputEl) inputEl.value = toYMD(lock);
+        if (btnOpen) {
+          btnOpen.classList.add("bg-amber-500/25", "border-amber-400/50");
+        }
+      } else {
+        if (textEl) textEl.textContent = "Khóa ngày";
+        if (descEl) descEl.textContent = "Hiện tại chưa đặt ngày khóa sổ.";
+        if (inputEl) inputEl.value = "";
+        if (btnOpen) {
+          btnOpen.classList.remove("bg-amber-500/25", "border-amber-400/50");
+        }
+      }
+    }
+
+    async function openLockDateModal() {
+      const lock = getLockDate();
+      $("lock-date-input").value = lock ? toYMD(lock) : "";
+      if ($("lock-date-pin")) $("lock-date-pin").value = "";
+      updateLockDateUI();
+      $("lock-date-modal").classList.remove("hidden");
+      if ($("lock-date-pin")) $("lock-date-pin").focus();
+      // Làm mới từ máy chủ
+      await fetchLockDate();
+    }
+
+    function closeLockDateModal() {
+      if ($("lock-date-pin")) $("lock-date-pin").value = "";
+      $("lock-date-modal").classList.add("hidden");
     }
 
     function unixNow() {
@@ -1405,7 +1591,7 @@
     }
 
     /* ========== Google Sheets — URL Endpoint ========== */
-    var SHEETS_URL = "https://script.google.com/macros/s/AKfycbwdleboFPOhYW4y7JNAyVMgtLuPrjyEEFzf3oveJ9WiurbwsyVXXWwRaItEkpmfEm0/exec";
+    var SHEETS_URL = "https://script.google.com/macros/s/AKfycbyE6Sms6dOVaqowarrIx8Jdj53PcvZzqua4bafuiXhu2W9eWrQW57Tmw1d7lsAneo4/exec";
 
     function openExportModal() {
       if (!state.phieu.length) {
@@ -1420,8 +1606,13 @@
       $("export-modal-qty").textContent = tongSL.toLocaleString("vi-VN");
       $("export-modal-total").textContent = `${tongTien.toLocaleString("vi-VN")} đ`;
 
+      const minDate = getMinAllowedDate();
+      const dateInput = $("export-modal-date");
+      if (minDate) dateInput.min = minDate;
+      else dateInput.removeAttribute("min");
+
       const savedDate = localStorage.getItem("sam_pet_export_date") || todayInputValue();
-      $("export-modal-date").value = savedDate;
+      dateInput.value = isDateLocked(savedDate) ? (minDate || todayInputValue()) : savedDate;
       $("export-modal").classList.remove("hidden");
     }
 
@@ -1433,6 +1624,11 @@
       const selectedDate = $("export-modal-date").value;
       if (!selectedDate) {
         toast("Vui lòng chọn ngày xuất hàng.", "error");
+        return;
+      }
+
+      if (isDateLocked(selectedDate)) {
+        toast(`Ngày xuất (${formatNgayXuat(selectedDate)}) đã bị khóa sổ (từ ngày ${formatLockDateVN(getLockDate())} trở về trước). Vui lòng chọn ngày sau ngày khóa!`, "error");
         return;
       }
 
@@ -1636,6 +1832,10 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.status === "error") throw new Error(data.message);
+        if (data.lockDate !== undefined) {
+          state.lockDate = data.lockDate ? toYMD(data.lockDate) : "";
+          updateLockDateUI();
+        }
         sheetHistory = (data.rows || []).map((r) => {
           r.date = normalizeDateVN(r.date);
           if (r.id) r.id = String(r.id).replace(/^'+/, '');
@@ -1669,6 +1869,13 @@
     async function deleteSelectedRows() {
       const ids = [...historySelected];
       if (!ids.length) return;
+
+      const lockedRows = sheetHistory.filter((r) => historySelected.has(r.id) && isDateLocked(r.date));
+      if (lockedRows.length > 0) {
+        toast(`Không thể xóa: Có ${lockedRows.length} dòng thuộc ngày đã khóa sổ (≤ ${formatLockDateVN(getLockDate())}).`, "error");
+        return;
+      }
+
       if (!confirm(`Xóa ${ids.length} dòng đã chọn khỏi Google Sheets?`)) return;
 
       $("btn-history-delete").disabled = true;
@@ -1712,8 +1919,36 @@
         }
       }
 
+      const isLocked = isDateLocked(row.date);
+      const warnEl = $("edit-modal-locked-warning");
+      const btnSave = $("btn-edit-save");
+
+      if (warnEl) {
+        if (isLocked) {
+          warnEl.innerHTML = `🔒 <strong>Đã khóa sổ:</strong> Dòng xuất hàng ngày <strong>${row.date}</strong> thuộc khoảng ngày đã khóa (≤ ${formatLockDateVN(getLockDate())}), không thể chỉnh sửa.`;
+          warnEl.classList.remove("hidden");
+        } else {
+          warnEl.classList.add("hidden");
+        }
+      }
+
+      $("edit-date").disabled = isLocked;
+      $("edit-quantity").disabled = isLocked;
+      $("edit-sellingprice").disabled = isLocked;
+      $("edit-note").disabled = isLocked;
+      $("btn-edit-qty-dec").disabled = isLocked;
+      $("btn-edit-qty-inc").disabled = isLocked;
+      btnSave.disabled = isLocked;
+
+      const minDate = getMinAllowedDate();
+      if (!isLocked && minDate) {
+        $("edit-date").min = minDate;
+      } else {
+        $("edit-date").removeAttribute("min");
+      }
+
       $("edit-modal").classList.remove("hidden");
-      $("edit-quantity").focus();
+      if (!isLocked) $("edit-quantity").focus();
     }
 
     function closeEditModal() {
@@ -1727,6 +1962,16 @@
       const purchasePrice = Number($("edit-purchaseprice").value);
       const note          = $("edit-note").value.trim();
       const dateIso       = $("edit-date").value;
+
+      const originalRow = sheetHistory.find((r) => r.id === id);
+      if (originalRow && isDateLocked(originalRow.date)) {
+        toast(`Dòng này thuộc ngày ${originalRow.date} đã bị khóa sổ, không thể chỉnh sửa.`, "error");
+        return;
+      }
+      if (dateIso && isDateLocked(dateIso)) {
+        toast(`Ngày xuất mới (${formatNgayXuat(dateIso)}) thuộc khoảng ngày đã khóa sổ (≤ ${formatLockDateVN(getLockDate())}).`, "error");
+        return;
+      }
 
       if (!Number.isFinite(quantityRaw) || quantityRaw <= 0) {
         toast("Số lượng phải lớn hơn 0.", "error"); return;
@@ -2246,8 +2491,13 @@
           </li>`;
       }).join("");
 
+      const minDate = getMinAllowedDate();
+      const dateInput = $("repackage-modal-date");
+      if (minDate) dateInput.min = minDate;
+      else dateInput.removeAttribute("min");
+
       const savedDate = localStorage.getItem("sam_pet_repackage_date") || todayInputValue();
-      $("repackage-modal-date").value = savedDate;
+      dateInput.value = isDateLocked(savedDate) ? (minDate || todayInputValue()) : savedDate;
       $("repackage-export-modal").classList.remove("hidden");
     }
 
@@ -2259,6 +2509,11 @@
       const selectedDate = $("repackage-modal-date").value;
       if (!selectedDate) {
         toast("Vui lòng chọn ngày thực hiện chiết hàng.", "error");
+        return;
+      }
+
+      if (isDateLocked(selectedDate)) {
+        toast(`Ngày chiết (${formatNgayXuat(selectedDate)}) đã bị khóa sổ (từ ngày ${formatLockDateVN(getLockDate())} trở về trước). Vui lòng chọn ngày sau ngày khóa!`, "error");
         return;
       }
 
@@ -2363,6 +2618,10 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.status === "error") throw new Error(data.message);
+        if (data.lockDate !== undefined) {
+          state.lockDate = data.lockDate ? toYMD(data.lockDate) : "";
+          updateLockDateUI();
+        }
 
         repackageHistory = (data.repackageRows || []).map((r) => {
           r.date = normalizeDateVN(r.date);
@@ -2559,6 +2818,14 @@
     async function deleteSelectedRepackageRows() {
       const selectedSessionIds = [...repackageSelected];
       if (!selectedSessionIds.length) return;
+
+      const sessions = getRepackageSessions();
+      const lockedSessions = sessions.filter((s) => selectedSessionIds.includes(s.sessionId) && isDateLocked(s.date));
+      if (lockedSessions.length > 0) {
+        toast(`Không thể xóa: Có ${lockedSessions.length} phiếu chiết thuộc ngày đã khóa sổ (≤ ${formatLockDateVN(getLockDate())}).`, "error");
+        return;
+      }
+
       if (!confirm(`Xóa ${selectedSessionIds.length} phiếu chiết hàng đã chọn?`)) return;
 
       $("btn-repackage-delete-selected").disabled = true;
@@ -2610,6 +2877,32 @@
         }
       }
 
+      const isLocked = isDateLocked(session.date);
+      const warnEl = $("repackage-edit-modal-locked-warning");
+      const btnSave = $("btn-repackage-edit-save");
+
+      if (warnEl) {
+        if (isLocked) {
+          warnEl.innerHTML = `🔒 <strong>Đã khóa sổ:</strong> Phiếu chiết ngày <strong>${session.date}</strong> thuộc khoảng ngày đã khóa (≤ ${formatLockDateVN(getLockDate())}), không thể chỉnh sửa.`;
+          warnEl.classList.remove("hidden");
+        } else {
+          warnEl.classList.add("hidden");
+        }
+      }
+
+      $("repackage-edit-date").disabled = isLocked;
+      $("repackage-edit-fromqty").disabled = isLocked;
+      if ($("btn-repackage-edit-fromqty-inc")) $("btn-repackage-edit-fromqty-inc").disabled = isLocked;
+      if ($("btn-repackage-edit-fromqty-dec")) $("btn-repackage-edit-fromqty-dec").disabled = isLocked;
+      btnSave.disabled = isLocked;
+
+      const minDate = getMinAllowedDate();
+      if (!isLocked && minDate) {
+        $("repackage-edit-date").min = minDate;
+      } else {
+        $("repackage-edit-date").removeAttribute("min");
+      }
+
       const container = $("repackage-edit-targets-container");
       container.innerHTML = session.items.map((it, idx) => `
         <div class="bg-emerald-50/40 border border-emerald-100 rounded-xl p-3 space-y-2.5" data-target-row-id="${escapeHtml(it.id)}">
@@ -2623,17 +2916,17 @@
             <div class="sm:col-span-6 flex items-center justify-between sm:justify-start gap-2 bg-white/80 p-1.5 rounded-lg border border-emerald-200/60">
               <span class="text-xs font-semibold text-emerald-800 shrink-0">SL nhận:</span>
               <div class="flex items-center gap-1">
-                <button type="button" data-action="repack-edit-qty-dec"
-                  class="w-8 h-8 shrink-0 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center select-none shadow-xs transition-colors">−</button>
-                <input type="number" min="0.01" step="any" value="${it.toQuantity}"
-                  class="repack-edit-item-qty w-20 rounded-lg bg-white border border-slate-300 px-1.5 py-1 text-sm font-bold text-emerald-700 text-center focus:outline-none focus:ring-2 focus:ring-pine-500 shadow-inner" />
-                <button type="button" data-action="repack-edit-qty-inc"
-                  class="w-8 h-8 shrink-0 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center select-none shadow-xs transition-colors">+</button>
+                <button type="button" data-action="repack-edit-qty-dec" ${isLocked ? "disabled" : ""}
+                  class="w-8 h-8 shrink-0 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center select-none shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed">−</button>
+                <input type="number" min="0.01" step="any" value="${it.toQuantity}" ${isLocked ? "disabled" : ""}
+                  class="repack-edit-item-qty w-20 rounded-lg bg-white border border-slate-300 px-1.5 py-1 text-sm font-bold text-emerald-700 text-center focus:outline-none focus:ring-2 focus:ring-pine-500 shadow-inner disabled:bg-slate-100 disabled:text-slate-500" />
+                <button type="button" data-action="repack-edit-qty-inc" ${isLocked ? "disabled" : ""}
+                  class="w-8 h-8 shrink-0 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center select-none shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed">+</button>
               </div>
             </div>
             <div class="sm:col-span-6 flex items-center">
-              <input type="text" maxlength="200" value="${escapeHtml(it.note || "")}" placeholder="Ghi chú quy cách…"
-                class="repack-edit-item-note w-full rounded-lg bg-white border border-slate-300 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-pine-500 placeholder:text-slate-400" />
+              <input type="text" maxlength="200" value="${escapeHtml(it.note || "")}" ${isLocked ? "disabled" : ""} placeholder="Ghi chú quy cách…"
+                class="repack-edit-item-note w-full rounded-lg bg-white border border-slate-300 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-pine-500 placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-500" />
             </div>
           </div>
         </div>
@@ -2650,6 +2943,17 @@
       const sessionId = $("repackage-edit-sessionid").value;
       const fromQty   = Number($("repackage-edit-fromqty").value);
       const dateIso   = $("repackage-edit-date").value;
+
+      const sessions = getRepackageSessions();
+      const session = sessions.find((s) => s.sessionId === sessionId);
+      if (session && isDateLocked(session.date)) {
+        toast(`Phiếu chiết này thuộc ngày ${session.date} đã bị khóa sổ, không thể chỉnh sửa.`, "error");
+        return;
+      }
+      if (dateIso && isDateLocked(dateIso)) {
+        toast(`Ngày chiết mới (${formatNgayXuat(dateIso)}) thuộc khoảng ngày đã khóa sổ (≤ ${formatLockDateVN(getLockDate())}).`, "error");
+        return;
+      }
 
       if (!Number.isFinite(fromQty) || fromQty <= 0) {
         toast("Số lượng nguồn phải lớn hơn 0.", "error");
@@ -3165,8 +3469,95 @@
       if (e.target === $("repackage-edit-modal")) closeRepackageEditModal();
     });
 
+    // Sự kiện Khóa Ngày Sổ Sách
+    if ($("btn-open-lock-date-modal")) $("btn-open-lock-date-modal").addEventListener("click", openLockDateModal);
+    if ($("btn-lock-date-close")) $("btn-lock-date-close").addEventListener("click", closeLockDateModal);
+    if ($("btn-lock-date-save")) {
+      $("btn-lock-date-save").addEventListener("click", async () => {
+        const val = $("lock-date-input").value;
+        const pin = ($("lock-date-pin")?.value || "").trim();
+        if (!val) {
+          toast("Vui lòng chọn ngày cần khóa sổ.", "warning");
+          return;
+        }
+        if (pin !== LOCK_DATE_PIN) {
+          toast("Mã PIN không chính xác. Vui lòng thử lại!", "error");
+          if ($("lock-date-pin")) {
+            $("lock-date-pin").value = "";
+            $("lock-date-pin").focus();
+          }
+          return;
+        }
+
+        const btn = $("btn-lock-date-save");
+        btn.disabled = true;
+        btn.textContent = "Đang đồng bộ…";
+
+        const isoDate = toYMD(val);
+        setLockDate(isoDate);
+
+        try {
+          await fetch(SHEETS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({ action: "set_lock_date", lockDate: isoDate })
+          });
+          toast(`Đã khóa sổ sách từ ngày ${formatLockDateVN(isoDate)} trở về trước và đồng bộ lên hệ thống.`, "success");
+        } catch (err) {
+          toast(`Đã khóa cục bộ nhưng chưa đồng bộ được lên server: ${err.message}`, "warning");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Lưu ngày khóa";
+          closeLockDateModal();
+        }
+      });
+    }
+    if ($("btn-lock-date-clear")) {
+      $("btn-lock-date-clear").addEventListener("click", async () => {
+        const pin = ($("lock-date-pin")?.value || "").trim();
+        if (pin !== LOCK_DATE_PIN) {
+          toast("Mã PIN không chính xác. Vui lòng thử lại!", "error");
+          if ($("lock-date-pin")) {
+            $("lock-date-pin").value = "";
+            $("lock-date-pin").focus();
+          }
+          return;
+        }
+
+        const btn = $("btn-lock-date-clear");
+        btn.disabled = true;
+        btn.textContent = "Đang mở…";
+
+        setLockDate("");
+
+        try {
+          await fetch(SHEETS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({ action: "set_lock_date", lockDate: "" })
+          });
+          toast("Đã mở khóa ngày sổ sách trên toàn hệ thống.", "info");
+        } catch (err) {
+          toast(`Đã mở khóa cục bộ nhưng chưa đồng bộ được: ${err.message}`, "warning");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Mở khóa (Hủy)";
+          closeLockDateModal();
+        }
+      });
+    }
+    if ($("lock-date-modal")) {
+      $("lock-date-modal").addEventListener("click", (e) => {
+        if (e.target === $("lock-date-modal")) closeLockDateModal();
+      });
+    }
+
     // Khởi tạo ứng dụng
     localStorage.removeItem("sam_pet_repackage_history");
+    localStorage.removeItem("sam_pet_lock_date");
+    fetchLockDate();
     renderPhieu();
     loadProducts();
     loadSheetHistory();
