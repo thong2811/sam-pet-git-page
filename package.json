@@ -1,0 +1,14 @@
+{
+  "name": "sam-pet-git-page",
+  "version": "1.0.0",
+  "description": "SamPet Web App & Google Apps Script synchronization",
+  "private": true,
+  "scripts": {
+    "login": "npx.cmd @google/clasp login",
+    "deploy": "node scripts/deploy.js",
+    "status": "npx.cmd @google/clasp status"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}

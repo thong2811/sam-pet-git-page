@@ -95,24 +95,36 @@ Trong kinh doanh Pet Shop, cửa hàng thường xuyên nhập các sản phẩm
 
 ```text
 sam-pet-git-page/
-├── icons/
+├── backend/                    # Mã nguồn & cấu hình Google Apps Script (Backend)
+│   ├── Code.gs                 # Script xử lý ghi Google Sheets & Khóa ngày sổ sách
+│   ├── appsscript.json         # Manifest khai báo quyền Web App
+│   └── .claspignore            # Quy tắc loại trừ khi đẩy code lên Apps Script
+├── docs/                       # Tài liệu kỹ thuật & đặc tả API
+│   └── DOCS_REPACKAGE_SYNC.md  # Tài liệu kỹ thuật đồng bộ Chiết hàng
+├── icons/                      # Icon ứng dụng PWA
 │   ├── apple-touch-icon.png    # Icon cho iOS Safari
 │   ├── icon-192.png            # Icon PWA 192x192
 │   ├── icon-512.png            # Icon PWA 512x512
 │   └── icon.svg                # Icon vector
+├── scripts/                    # Scripts tự động hóa
+│   └── deploy.js               # Script Node.js tự động deploy Clasp & giữ nguyên URL
+├── .clasp.json                 # Cấu hình liên kết Google Clasp
+├── .gitignore                  # Cấu hình bỏ qua tệp của Git
+├── env.example.js              # Tệp mẫu cấu hình môi trường
+├── env.js                      # Cấu hình môi trường thực tế (SHEETS_URL, PIN, Version)
 ├── index.html                  # Giao diện & toàn bộ mã nguồn xử lý ứng dụng (Xuất & Chiết hàng)
 ├── manifest.json               # Cấu hình PWA (theme, tên app, icon, start_url)
+├── package.json                # Quản lý script NPM & Clasp
 ├── products.csv                # Dữ liệu danh mục sản phẩm (id, name, unit, sellingPrice, initStock, ...)
-├── sw.js                       # Service Worker quản lý cache & offline
-├── DOCS_REPACKAGE_SYNC.md      # Tài liệu đặc tả kỹ thuật API & Đồng bộ Google Sheets cho Chiết Hàng
-└── README.md                   # Tài liệu hướng dẫn sử dụng và phát triển
+├── README.md                   # Tài liệu hướng dẫn sử dụng và phát triển
+└── sw.js                       # Service Worker quản lý cache & offline
 ```
 
 ---
 
 ## 📊 Cấu Trúc Dữ Liệu & CSV Schema
 
-> 📖 **Xem tài liệu kỹ thuật đồng bộ đầy đủ tại**: [DOCS_REPACKAGE_SYNC.md](file:///d:/Developer/Project/sam-pet-git-page/DOCS_REPACKAGE_SYNC.md)
+> 📖 **Xem tài liệu kỹ thuật đồng bộ đầy đủ tại**: [docs/DOCS_REPACKAGE_SYNC.md](file:///d:/Developer/Project/sam-pet-git-page/docs/DOCS_REPACKAGE_SYNC.md)
 
 ### 1. Cấu trúc file danh mục sản phẩm (`products.csv`)
 ```csv
@@ -166,7 +178,7 @@ window.ENV = {
 };
 ```
 
-Xem chi tiết payloads mẫu, phương thức GET / POST và trọn bộ mã nguồn `Code.gs` tại [DOCS_REPACKAGE_SYNC.md](file:///d:/Developer/Project/sam-pet-git-page/DOCS_REPACKAGE_SYNC.md).
+Xem chi tiết payloads mẫu, phương thức GET / POST và trọn bộ mã nguồn `Code.gs` tại [docs/DOCS_REPACKAGE_SYNC.md](file:///d:/Developer/Project/sam-pet-git-page/docs/DOCS_REPACKAGE_SYNC.md).
 
 ---
 
@@ -187,3 +199,31 @@ Truy cập `http://localhost:8000`.
 1. Đẩy toàn bộ mã nguồn lên nhánh `main` trên GitHub repository `sam-pet-git-page`.
 2. Vào **Settings** -> **Pages** -> chọn branch `main` -> **Save**.
 3. Ứng dụng sẽ tự động triển khai và có thể cài đặt PWA trực tiếp trên điện thoại.
+
+---
+
+## ⚡ Tự Động Deploy `backend/Code.gs` Lên Google Apps Script (Clasp)
+
+Ứng dụng hỗ trợ công cụ chính thức từ Google (**Google Clasp**) để tự động đẩy code và giữ nguyên Web App URL:
+
+### Bước 1: Chuẩn bị 1 lần duy nhất
+1. Bật **Google Apps Script API** tại: [https://script.google.com/home/usersettings](https://script.google.com/home/usersettings) (gạt sang **ON**).
+2. Đăng nhập tài khoản Google trên máy:
+   ```bash
+   npm run login
+   ```
+3. Lấy **Script ID** của dự án Apps Script (trong Apps Script: *Cài đặt dự án ⚙️ &rarr; Mã tập lệnh / Script ID*), sau đó dán vào tệp [.clasp.json](file:///d:/Developer/Project/sam-pet-git-page/.clasp.json):
+   ```json
+   {
+     "scriptId": "MÃ_SCRIPT_ID_CỦA_BẠN",
+     "rootDir": "./backend"
+   }
+   ```
+
+### Bước 2: Tự động deploy mỗi khi sửa `backend/Code.gs`
+Chỉ cần chạy **duy nhất 1 lệnh**:
+```bash
+npm run deploy
+```
+*(Script sẽ tự động đẩy `Code.gs` lên và cập nhật phiên bản Web App, giữ nguyên 100% link URL)*
+
