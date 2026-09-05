@@ -2689,27 +2689,26 @@
           }
         });
 
-        const updatePromises = targetUpdates.map((tu, idx) => {
-          return fetch(SHEETS_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify({
-              action: "repackage_update",
-              row: {
-                id: tu.id,
-                sessionId: sessionId,
-                date: dateFormatted,
-                fromQuantity: idx === 0 ? fromQty : 0,
-                toQuantity: tu.toQuantity,
-                note: tu.note,
-                updatedAt: now
-              }
-            })
-          });
-        });
+        const rowsPayload = targetUpdates.map((tu, idx) => ({
+          id: tu.id,
+          sessionId: sessionId,
+          date: dateFormatted,
+          fromQuantity: idx === 0 ? fromQty : 0,
+          sessionFromQty: fromQty,
+          toQuantity: tu.toQuantity,
+          note: tu.note,
+          updatedAt: now
+        }));
 
-        await Promise.all(updatePromises);
+        await fetch(SHEETS_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            action: "repackage_update",
+            rows: rowsPayload
+          })
+        });
 
         toast("Đã cập nhật phiếu chiết hàng.", "success");
         closeRepackageEditModal();

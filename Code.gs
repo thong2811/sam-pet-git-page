@@ -153,11 +153,17 @@ function actionAppend(payload) {
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       var idValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-      idValues.forEach(function(r) { existingIds[String(r[0])] = true; });
+      idValues.forEach(function(r) {
+        var cleanId = String(r[0]).replace(/^'+/, '').trim();
+        existingIds[cleanId] = true;
+      });
     }
 
     var newRows = rows
-      .filter(function(row) { return row.id && !existingIds[String(row.id)]; })
+      .filter(function(row) {
+        var cleanId = String(row.id || '').replace(/^'+/, '').trim();
+        return cleanId && !existingIds[cleanId];
+      })
       .map(function(row) {
         return HEADER_PHIEUXUAT.map(function(key) {
           return row[key] !== undefined ? row[key] : "";
@@ -200,11 +206,15 @@ function actionDelete(payload) {
 
     var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
     var idSet = {};
-    ids.forEach(function(id) { idSet[String(id)] = true; });
+    ids.forEach(function(id) {
+      var clean = String(id).replace(/^'+/, '').trim();
+      idSet[clean] = true;
+    });
 
     var deleted = 0;
     for (var i = idCol.length - 1; i >= 0; i--) {
-      if (idSet[String(idCol[i][0])]) {
+      var cellId = String(idCol[i][0]).replace(/^'+/, '').trim();
+      if (idSet[cellId]) {
         sheet.deleteRow(i + 2);
         deleted++;
       }
@@ -230,7 +240,7 @@ function actionUpdate(payload) {
   }
 
   try {
-    var sheet = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+    var sheet   = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) {
       return jsonResponse({ status: "error", message: "Không tìm thấy dòng id=" + row.id });
@@ -238,8 +248,10 @@ function actionUpdate(payload) {
 
     var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
     var targetRow = -1;
+    var searchId = String(row.id).replace(/^'+/, '').trim();
     for (var i = 0; i < idCol.length; i++) {
-      if (String(idCol[i][0]) === String(row.id)) {
+      var cellId = String(idCol[i][0]).replace(/^'+/, '').trim();
+      if (cellId === searchId) {
         targetRow = i + 2;
         break;
       }
@@ -260,6 +272,7 @@ function actionUpdate(payload) {
 
     var updatedValues = HEADER_PHIEUXUAT.map(function(key) { return currentRow[key]; });
     sheet.getRange(targetRow, 1, 1, HEADER_PHIEUXUAT.length).setValues([updatedValues]);
+    sheet.getRange(targetRow, 2, 1, 1).setNumberFormat("@");
 
     return jsonResponse({ status: "ok", message: "Đã cập nhật dòng id=" + row.id });
   } finally {
@@ -291,11 +304,17 @@ function actionRepackage(payload) {
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       var idValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-      idValues.forEach(function(r) { existingIds[String(r[0])] = true; });
+      idValues.forEach(function(r) {
+        var cleanId = String(r[0]).replace(/^'+/, '').trim();
+        existingIds[cleanId] = true;
+      });
     }
 
     var newRows = rows
-      .filter(function(row) { return row.id && !existingIds[String(row.id)]; })
+      .filter(function(row) {
+        var cleanId = String(row.id || '').replace(/^'+/, '').trim();
+        return cleanId && !existingIds[cleanId];
+      })
       .map(function(row) {
         return HEADER_REPACKAGE.map(function(key) {
           return row[key] !== undefined ? row[key] : "";
@@ -338,11 +357,15 @@ function actionRepackageDelete(payload) {
 
     var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
     var idSet = {};
-    ids.forEach(function(id) { idSet[String(id)] = true; });
+    ids.forEach(function(id) {
+      var clean = String(id).replace(/^'+/, '').trim();
+      idSet[clean] = true;
+    });
 
     var deleted = 0;
     for (var i = idCol.length - 1; i >= 0; i--) {
-      if (idSet[String(idCol[i][0])]) {
+      var cellId = String(idCol[i][0]).replace(/^'+/, '').trim();
+      if (idSet[cellId]) {
         sheet.deleteRow(i + 2);
         deleted++;
       }
@@ -355,9 +378,15 @@ function actionRepackageDelete(payload) {
 }
 
 function actionRepackageUpdate(payload) {
-  var row = payload.row;
-  if (!row || !row.id) {
-    return jsonResponse({ status: "error", message: "Thiếu id trong row chiết hàng." });
+  var rowsToUpdate = [];
+  if (payload.rows && Array.isArray(payload.rows)) {
+    rowsToUpdate = payload.rows;
+  } else if (payload.row && payload.row.id) {
+    rowsToUpdate = [payload.row];
+  }
+
+  if (rowsToUpdate.length === 0) {
+    return jsonResponse({ status: "error", message: "Thiếu dữ liệu rows / row trong action repackage_update." });
   }
 
   var lock = LockService.getScriptLock();
@@ -371,35 +400,40 @@ function actionRepackageUpdate(payload) {
     var sheet = getOrCreateSheet(SHEET_NAME_REPACKAGE, HEADER_REPACKAGE);
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) {
-      return jsonResponse({ status: "error", message: "Không tìm thấy dòng chiết id=" + row.id });
+      return jsonResponse({ status: "error", message: "Sheet chiết hàng đang trống." });
     }
 
     var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    var targetRow = -1;
+    var idToRowIndex = {};
     for (var i = 0; i < idCol.length; i++) {
-      if (String(idCol[i][0]) === String(row.id)) {
-        targetRow = i + 2;
-        break;
-      }
+      var rawId = String(idCol[i][0]).replace(/^'+/, '').trim();
+      idToRowIndex[rawId] = i + 2;
     }
 
-    if (targetRow === -1) {
-      return jsonResponse({ status: "error", message: "Không tìm thấy dòng chiết id=" + row.id });
-    }
-
-    var currentValues = sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).getValues()[0];
-    var currentRow = {};
-    HEADER_REPACKAGE.forEach(function(key, i) { currentRow[key] = currentValues[i]; });
-
+    var updatedCount = 0;
     var EDITABLE = ["date", "fromQuantity", "sessionFromQty", "toQuantity", "note", "updatedAt"];
-    EDITABLE.forEach(function(key) {
-      if (row[key] !== undefined) currentRow[key] = row[key];
+
+    rowsToUpdate.forEach(function(row) {
+      if (!row || !row.id) return;
+      var targetId = String(row.id).replace(/^'+/, '').trim();
+      var targetRow = idToRowIndex[targetId];
+      if (!targetRow) return;
+
+      var currentValues = sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).getValues()[0];
+      var currentRow = {};
+      HEADER_REPACKAGE.forEach(function(key, k) { currentRow[key] = currentValues[k]; });
+
+      EDITABLE.forEach(function(key) {
+        if (row[key] !== undefined) currentRow[key] = row[key];
+      });
+
+      var updatedValues = HEADER_REPACKAGE.map(function(key) { return currentRow[key]; });
+      sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).setValues([updatedValues]);
+      sheet.getRange(targetRow, 3, 1, 1).setNumberFormat("@"); // Cột date dạng text
+      updatedCount++;
     });
 
-    var updatedValues = HEADER_REPACKAGE.map(function(key) { return currentRow[key]; });
-    sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).setValues([updatedValues]);
-
-    return jsonResponse({ status: "ok", message: "Đã cập nhật dòng chiết id=" + row.id });
+    return jsonResponse({ status: "ok", message: "Đã cập nhật " + updatedCount + " dòng chiết hàng.", updatedCount: updatedCount });
   } finally {
     lock.releaseLock();
   }
