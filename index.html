@@ -2300,8 +2300,6 @@
       btnConfirm.innerHTML = `Đang xử lý…`;
 
       try {
-        saveRepackageHistoryLocal(newRows);
-
         await fetch(SHEETS_URL, {
           method: "POST",
           mode: "no-cors",
@@ -2326,27 +2324,6 @@
     }
 
     /* ========== Quản lý Lịch sử Chiết Hàng (Gom nhóm theo Phiếu/Session) ========== */
-    function getStoredRepackageHistory() {
-      try {
-        const raw = localStorage.getItem("sam_pet_repackage_history");
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveRepackageHistoryLocal(newRows) {
-      const current = getStoredRepackageHistory();
-      const combined = [...newRows, ...current];
-      const map = new Map();
-      combined.forEach((r) => map.set(r.id, r));
-      localStorage.setItem("sam_pet_repackage_history", JSON.stringify([...map.values()]));
-    }
-
-    function updateStoredRepackageHistory(updatedList) {
-      localStorage.setItem("sam_pet_repackage_history", JSON.stringify(updatedList));
-    }
-
     async function loadRepackageHistory() {
       $("repackage-history-summary").textContent = "Đang tải dữ liệu chiết hàng…";
       $("repackage-history-empty").classList.add("hidden");
@@ -2381,49 +2358,42 @@
       $("repackage-history-body").innerHTML = loadingTableHtml;
       $("repackage-history-cards").innerHTML = loadingCardsHtml;
 
-      let localData = getStoredRepackageHistory();
-
       try {
         const res = await fetch(SHEETS_URL + "?type=repackage", { method: "GET" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.repackageRows && Array.isArray(data.repackageRows)) {
-            const remoteRows = data.repackageRows.map((r) => {
-              r.date = normalizeDateVN(r.date);
-              if (r.id) r.id = String(r.id).replace(/^'+/, '');
-              if (r.fromProductId) r.fromProductId = String(r.fromProductId).replace(/^'+/, '');
-              if (r.toProductId) r.toProductId = String(r.toProductId).replace(/^'+/, '');
-              return r;
-            });
-            const map = new Map();
-            localData.forEach((r) => map.set(r.id, r));
-            remoteRows.forEach((r) => map.set(r.id, r));
-            localData = [...map.values()];
-            updateStoredRepackageHistory(localData);
-          }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.status === "error") throw new Error(data.message);
+
+        repackageHistory = (data.repackageRows || []).map((r) => {
+          r.date = normalizeDateVN(r.date);
+          if (r.id) r.id = String(r.id).replace(/^'+/, '');
+          if (r.fromProductId) r.fromProductId = String(r.fromProductId).replace(/^'+/, '');
+          if (r.toProductId) r.toProductId = String(r.toProductId).replace(/^'+/, '');
+          return r;
+        }).sort((a, b) => {
+          const toYMD = (s) => {
+            const p = (s || "").split("-");
+            return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s;
+          };
+          const dateCmp = toYMD(b.date).localeCompare(toYMD(a.date));
+          if (dateCmp !== 0) return dateCmp;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        });
+
+        repackageSelected.clear();
+        renderRepackageHistory();
+      } catch (err) {
+        $("repackage-history-summary").textContent = "Tải thất bại: " + err.message;
+        $("repackage-history-body").innerHTML = "";
+        $("repackage-history-cards").innerHTML = "";
+        repackageHistory = [];
+        renderRepackageHistory();
+      } finally {
+        if (btnReload) {
+          btnReload.disabled = false;
+          const icon = btnReload.querySelector("svg");
+          if (icon) icon.classList.remove("animate-spin");
         }
-      } catch (err) {}
-
-      repackageHistory = localData.map((r) => {
-        r.date = normalizeDateVN(r.date);
-        return r;
-      }).sort((a, b) => {
-        const toYMD = (s) => {
-          const p = (s || "").split("-");
-          return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : s;
-        };
-        const dateCmp = toYMD(b.date).localeCompare(toYMD(a.date));
-        if (dateCmp !== 0) return dateCmp;
-        return (b.createdAt || 0) - (a.createdAt || 0);
-      });
-
-      repackageSelected.clear();
-      renderRepackageHistory();
-
-      if (btnReload) {
-        btnReload.disabled = false;
-        const icon = btnReload.querySelector("svg");
-        if (icon) icon.classList.remove("animate-spin");
       }
     }
 
@@ -2596,7 +2566,6 @@
         const idsToDelete = rowsToDelete.map((r) => r.id);
 
         repackageHistory = repackageHistory.filter((r) => !idsToDelete.includes(r.id));
-        updateStoredRepackageHistory(repackageHistory);
 
         if (idsToDelete.length > 0) {
           await fetch(SHEETS_URL, {
@@ -2719,8 +2688,6 @@
             row.updatedAt = now;
           }
         });
-
-        updateStoredRepackageHistory(repackageHistory);
 
         const updatePromises = targetUpdates.map((tu, idx) => {
           return fetch(SHEETS_URL, {
@@ -3193,6 +3160,7 @@
     });
 
     // Khởi tạo ứng dụng
+    localStorage.removeItem("sam_pet_repackage_history");
     renderPhieu();
     loadProducts();
     loadSheetHistory();
