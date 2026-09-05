@@ -145,11 +145,25 @@ id,sessionId,date,fromProductId,fromProductName,toProductId,toProductName,fromQu
 
 ---
 
-## 🌐 Tích Hợp Google Apps Script API
+## 🌐 Cấu Hình Biến Môi Trường (`env.js`)
 
-URL Web App Endpoint:
+Các cấu hình như URL Google Apps Script, mã PIN khóa sổ sách, phiên bản ứng dụng được tách riêng trong tệp [env.js](file:///d:/Developer/Project/sam-pet-git-page/env.js) (hoặc tham khảo mẫu [env.example.js](file:///d:/Developer/Project/sam-pet-git-page/env.example.js)):
+
 ```javascript
-var SHEETS_URL = "https://script.google.com/macros/s/AKfycbwdleboFPOhYW4y7JNAyVMgtLuPrjyEEFzf3oveJ9WiurbwsyVXXWwRaItEkpmfEm0/exec";
+window.ENV = {
+  // Link Web App Google Apps Script kết nối Google Sheet
+  SHEETS_URL: "https://script.google.com/macros/s/.../exec",
+
+  // Mã PIN bảo mật cho chức năng Khóa/Mở khóa ngày sổ sách
+  LOCK_DATE_PIN: "110899",
+
+  // Tên các tab trong Google Sheet
+  SHEET_NAME_PHIEUXUAT: "PhieuXuat",
+  SHEET_NAME_REPACKAGE: "repackage",
+
+  // Phiên bản ứng dụng
+  APP_VERSION: "1.0.0"
+};
 ```
 
 Xem chi tiết payloads mẫu, phương thức GET / POST và trọn bộ mã nguồn `Code.gs` tại [DOCS_REPACKAGE_SYNC.md](file:///d:/Developer/Project/sam-pet-git-page/DOCS_REPACKAGE_SYNC.md).

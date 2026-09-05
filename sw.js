@@ -1,7 +1,15 @@
-const CACHE_NAME = "sam-pet-v34";
+// Nạp cấu hình môi trường từ env.js
+try {
+  importScripts("./env.js");
+} catch (e) {
+  console.warn("Không thể nạp env.js trong Service Worker:", e);
+}
+
+const CACHE_NAME = "sam-pet-v" + (self.ENV && self.ENV.APP_VERSION ? self.ENV.APP_VERSION : "1.0.0");
 const ASSETS = [
   "./",
   "./index.html",
+  "./env.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

@@ -13,6 +13,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SamPet" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <!-- Configuration / Environment Variables -->
+  <script src="env.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -978,7 +980,7 @@
     }
 
     /* ========== Quản lý Khóa Ngày Sổ Sách (Lock Date) ========== */
-    const LOCK_DATE_PIN = "110899";
+    const LOCK_DATE_PIN = (window.ENV && window.ENV.LOCK_DATE_PIN) ? String(window.ENV.LOCK_DATE_PIN) : "110899";
 
     function toYMD(dateStr) {
       if (!dateStr) return "";
@@ -1591,7 +1593,7 @@
     }
 
     /* ========== Google Sheets — URL Endpoint ========== */
-    var SHEETS_URL = "https://script.google.com/macros/s/AKfycbyE6Sms6dOVaqowarrIx8Jdj53PcvZzqua4bafuiXhu2W9eWrQW57Tmw1d7lsAneo4/exec";
+    var SHEETS_URL = (window.ENV && window.ENV.SHEETS_URL) ? window.ENV.SHEETS_URL : "https://script.google.com/macros/s/AKfycbyE6Sms6dOVaqowarrIx8Jdj53PcvZzqua4bafuiXhu2W9eWrQW57Tmw1d7lsAneo4/exec";
 
     function openExportModal() {
       if (!state.phieu.length) {
@@ -3172,6 +3174,7 @@
       });
     });
 
+    if ($("btn-edit-close")) $("btn-edit-close").addEventListener("click", closeEditModal);
     $("btn-edit-cancel").addEventListener("click", closeEditModal);
     $("btn-edit-save").addEventListener("click", saveEditModal);
     $("edit-modal").addEventListener("click", (e) => {

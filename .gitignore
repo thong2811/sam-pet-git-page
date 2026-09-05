@@ -6,3 +6,8 @@ apps-script/
 
 # Dữ liệu xuất hàng local
 export-stock.csv
+
+# Dotenv files (if used locally by CLI/tools)
+.env
+.env.*
+.env.local
