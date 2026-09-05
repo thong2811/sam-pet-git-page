@@ -1,0 +1,448 @@
+// ============================================================
+//  SAM Pet — Google Apps Script Web App (Xuất Hàng & Chiết Hàng)
+//
+//  doGet:
+//    - ?type=repackage : trả về dữ liệu tab "repackage" { status: "ok", repackageRows: [...] }
+//    - Mặc định        : trả về dữ liệu tab "PhieuXuat" { status: "ok", rows: [...] }
+//
+//  doPost:
+//    - Xuất hàng : { action: "append" | "delete" | "update", ... }
+//    - Chiết hàng: { action: "repackage" | "repackage_delete" | "repackage_update", ... }
+//
+//  LockService: mọi thao tác ghi đều dùng script lock để tránh
+//  race condition khi nhiều người dùng cùng thao tác.
+//
+//  HƯỚNG DẪN DEPLOY:
+//  1. Mở Google Sheet → Tiện ích mở rộng > Apps Script → dán file này vào.
+//  2. Deploy > Manage deployments (hoặc New deployment) > Web app
+//     - Execute as: Me
+//     - Who has access: Anyone
+//  3. Copy URL và cập nhật SHEETS_URL trong index.html.
+// ============================================================
+
+var SHEET_NAME_PHIEUXUAT = "PhieuXuat";
+var SHEET_NAME_REPACKAGE = "repackage";
+var LOCK_TIMEOUT_MS = 10000; // chờ lock tối đa 10 giây
+
+var HEADER_PHIEUXUAT = [
+  "id", "date", "productId", "productName",
+  "quantity", "sellingPrice", "purchasePrice",
+  "note", "createdAt", "updatedAt"
+];
+
+var HEADER_REPACKAGE = [
+  "id", "sessionId", "date",
+  "fromProductId", "fromProductName",
+  "toProductId", "toProductName",
+  "fromQuantity", "sessionFromQty", "toQuantity",
+  "note", "createdAt", "updatedAt"
+];
+
+// ── doGet ────────────────────────────────────────────────────
+function doGet(e) {
+  try {
+    var type = (e && e.parameter && e.parameter.type) ? e.parameter.type : "";
+
+    // 1. Trả về dữ liệu tab CHIẾT HÀNG
+    if (type === "repackage") {
+      var ssRepack = SpreadsheetApp.getActiveSpreadsheet();
+      var sheetRepack = ssRepack.getSheetByName(SHEET_NAME_REPACKAGE);
+
+      if (!sheetRepack || sheetRepack.getLastRow() <= 1) {
+        return jsonResponse({ status: "ok", repackageRows: [] });
+      }
+
+      var lastRowR = sheetRepack.getLastRow();
+      var dataR    = sheetRepack.getRange(2, 1, lastRowR - 1, HEADER_REPACKAGE.length).getValues();
+
+      var repackageRows = dataR.map(function(row) {
+        var obj = {};
+        HEADER_REPACKAGE.forEach(function(key, i) {
+          var val = row[i];
+          if (key === "date") {
+            val = normalizeDateString(val);
+          } else if (key === "fromQuantity" || key === "sessionFromQty" || key === "toQuantity" || key === "createdAt" || key === "updatedAt") {
+            val = val !== "" && !isNaN(val) ? Number(val) : val;
+          } else {
+            val = val !== undefined ? String(val) : "";
+          }
+          obj[key] = val;
+        });
+        return obj;
+      });
+
+      return jsonResponse({ status: "ok", repackageRows: repackageRows });
+    }
+
+    // 2. Trả về dữ liệu tab XUẤT HÀNG (Mặc định)
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_NAME_PHIEUXUAT);
+
+    if (!sheet || sheet.getLastRow() <= 1) {
+      return jsonResponse({ status: "ok", rows: [] });
+    }
+
+    var lastRow = sheet.getLastRow();
+    var data    = sheet.getRange(2, 1, lastRow - 1, HEADER_PHIEUXUAT.length).getValues();
+
+    var rows = data.map(function(row) {
+      var obj = {};
+      HEADER_PHIEUXUAT.forEach(function(key, i) {
+        var val = row[i];
+        if (key === "date") {
+          val = normalizeDateString(val);
+        } else {
+          val = val !== undefined ? String(val) : "";
+        }
+        obj[key] = val;
+      });
+      return obj;
+    });
+
+    return jsonResponse({ status: "ok", rows: rows });
+
+  } catch (err) {
+    return jsonResponse({ status: "error", message: err.toString(), rows: [], repackageRows: [] });
+  }
+}
+
+// ── doPost ───────────────────────────────────────────────────
+function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    var action  = payload.action || "append";
+
+    // Router Xuất Hàng
+    if (action === "append") return actionAppend(payload);
+    if (action === "delete") return actionDelete(payload);
+    if (action === "update") return actionUpdate(payload);
+
+    // Router Chiết Hàng
+    if (action === "repackage")        return actionRepackage(payload);
+    if (action === "repackage_delete") return actionRepackageDelete(payload);
+    if (action === "repackage_update") return actionRepackageUpdate(payload);
+
+    return jsonResponse({ status: "error", message: "action không hợp lệ: " + action });
+
+  } catch (err) {
+    return jsonResponse({ status: "error", message: err.toString() });
+  }
+}
+
+// ============================================================
+//  LOGIC CHO TAB XUẤT HÀNG (PhieuXuat)
+// ============================================================
+
+function actionAppend(payload) {
+  var rows = payload.rows;
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return jsonResponse({ status: "error", message: "Không có dữ liệu rows." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+
+    var existingIds = {};
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      var idValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      idValues.forEach(function(r) { existingIds[String(r[0])] = true; });
+    }
+
+    var newRows = rows
+      .filter(function(row) { return row.id && !existingIds[String(row.id)]; })
+      .map(function(row) {
+        return HEADER_PHIEUXUAT.map(function(key) {
+          return row[key] !== undefined ? row[key] : "";
+        });
+      });
+
+    if (newRows.length === 0) {
+      return jsonResponse({ status: "ok", message: "Không có dòng mới (tất cả đã tồn tại).", rowsWritten: 0 });
+    }
+
+    var insertAt = sheet.getLastRow() + 1;
+    sheet.getRange(insertAt, 1, newRows.length, HEADER_PHIEUXUAT.length).setValues(newRows);
+    sheet.getRange(insertAt, 2, newRows.length, 1).setNumberFormat("@");
+
+    return jsonResponse({ status: "ok", message: "Đã ghi " + newRows.length + " dòng.", rowsWritten: newRows.length });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function actionDelete(payload) {
+  var ids = payload.ids;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return jsonResponse({ status: "error", message: "Không có ids cần xóa." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return jsonResponse({ status: "ok", message: "Sheet đang trống.", rowsDeleted: 0 });
+    }
+
+    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var idSet = {};
+    ids.forEach(function(id) { idSet[String(id)] = true; });
+
+    var deleted = 0;
+    for (var i = idCol.length - 1; i >= 0; i--) {
+      if (idSet[String(idCol[i][0])]) {
+        sheet.deleteRow(i + 2);
+        deleted++;
+      }
+    }
+
+    return jsonResponse({ status: "ok", message: "Đã xóa " + deleted + " dòng.", rowsDeleted: deleted });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function actionUpdate(payload) {
+  var row = payload.row;
+  if (!row || !row.id) {
+    return jsonResponse({ status: "error", message: "Thiếu id trong row." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return jsonResponse({ status: "error", message: "Không tìm thấy dòng id=" + row.id });
+    }
+
+    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var targetRow = -1;
+    for (var i = 0; i < idCol.length; i++) {
+      if (String(idCol[i][0]) === String(row.id)) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      return jsonResponse({ status: "error", message: "Không tìm thấy dòng id=" + row.id });
+    }
+
+    var currentValues = sheet.getRange(targetRow, 1, 1, HEADER_PHIEUXUAT.length).getValues()[0];
+    var currentRow = {};
+    HEADER_PHIEUXUAT.forEach(function(key, i) { currentRow[key] = currentValues[i]; });
+
+    var EDITABLE = ["date", "quantity", "sellingPrice", "purchasePrice", "note", "updatedAt"];
+    EDITABLE.forEach(function(key) {
+      if (row[key] !== undefined) currentRow[key] = row[key];
+    });
+
+    var updatedValues = HEADER_PHIEUXUAT.map(function(key) { return currentRow[key]; });
+    sheet.getRange(targetRow, 1, 1, HEADER_PHIEUXUAT.length).setValues([updatedValues]);
+
+    return jsonResponse({ status: "ok", message: "Đã cập nhật dòng id=" + row.id });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================
+//  LOGIC CHO TAB CHIẾT HÀNG (repackage)
+// ============================================================
+
+function actionRepackage(payload) {
+  var rows = payload.rows;
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return jsonResponse({ status: "error", message: "Không có dữ liệu rows chiết hàng." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_REPACKAGE, HEADER_REPACKAGE);
+
+    var existingIds = {};
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      var idValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      idValues.forEach(function(r) { existingIds[String(r[0])] = true; });
+    }
+
+    var newRows = rows
+      .filter(function(row) { return row.id && !existingIds[String(row.id)]; })
+      .map(function(row) {
+        return HEADER_REPACKAGE.map(function(key) {
+          return row[key] !== undefined ? row[key] : "";
+        });
+      });
+
+    if (newRows.length === 0) {
+      return jsonResponse({ status: "ok", message: "Không có dòng mới.", rowsWritten: 0 });
+    }
+
+    var insertAt = sheet.getLastRow() + 1;
+    sheet.getRange(insertAt, 1, newRows.length, HEADER_REPACKAGE.length).setValues(newRows);
+    sheet.getRange(insertAt, 3, newRows.length, 1).setNumberFormat("@"); // Cột date
+
+    return jsonResponse({ status: "ok", message: "Đã ghi " + newRows.length + " dòng chiết hàng.", rowsWritten: newRows.length });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function actionRepackageDelete(payload) {
+  var ids = payload.ids;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return jsonResponse({ status: "error", message: "Không có ids chiết hàng cần xóa." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_REPACKAGE, HEADER_REPACKAGE);
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return jsonResponse({ status: "ok", message: "Sheet chiết hàng đang trống.", rowsDeleted: 0 });
+    }
+
+    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var idSet = {};
+    ids.forEach(function(id) { idSet[String(id)] = true; });
+
+    var deleted = 0;
+    for (var i = idCol.length - 1; i >= 0; i--) {
+      if (idSet[String(idCol[i][0])]) {
+        sheet.deleteRow(i + 2);
+        deleted++;
+      }
+    }
+
+    return jsonResponse({ status: "ok", message: "Đã xóa " + deleted + " dòng chiết hàng.", rowsDeleted: deleted });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function actionRepackageUpdate(payload) {
+  var row = payload.row;
+  if (!row || !row.id) {
+    return jsonResponse({ status: "error", message: "Thiếu id trong row chiết hàng." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_REPACKAGE, HEADER_REPACKAGE);
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return jsonResponse({ status: "error", message: "Không tìm thấy dòng chiết id=" + row.id });
+    }
+
+    var idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var targetRow = -1;
+    for (var i = 0; i < idCol.length; i++) {
+      if (String(idCol[i][0]) === String(row.id)) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      return jsonResponse({ status: "error", message: "Không tìm thấy dòng chiết id=" + row.id });
+    }
+
+    var currentValues = sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).getValues()[0];
+    var currentRow = {};
+    HEADER_REPACKAGE.forEach(function(key, i) { currentRow[key] = currentValues[i]; });
+
+    var EDITABLE = ["date", "fromQuantity", "sessionFromQty", "toQuantity", "note", "updatedAt"];
+    EDITABLE.forEach(function(key) {
+      if (row[key] !== undefined) currentRow[key] = row[key];
+    });
+
+    var updatedValues = HEADER_REPACKAGE.map(function(key) { return currentRow[key]; });
+    sheet.getRange(targetRow, 1, 1, HEADER_REPACKAGE.length).setValues([updatedValues]);
+
+    return jsonResponse({ status: "ok", message: "Đã cập nhật dòng chiết id=" + row.id });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function getOrCreateSheet(name, header) {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(header);
+    var headerRange = sheet.getRange(1, 1, 1, header.length);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#134441");
+    headerRange.setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function normalizeDateString(val) {
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    var d = val.getDate();
+    var m = val.getMonth() + 1;
+    var y = val.getFullYear();
+    return (d < 10 ? "0" + d : d) + "-" + (m < 10 ? "0" + m : m) + "-" + y;
+  }
+  var s = String(val || "").trim();
+  if (s && !/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+    var parsed = new Date(s);
+    if (!isNaN(parsed.getTime())) {
+      var dd = parsed.getDate();
+      var mm = parsed.getMonth() + 1;
+      var yy = parsed.getFullYear();
+      return (dd < 10 ? "0" + dd : dd) + "-" + (mm < 10 ? "0" + mm : mm) + "-" + yy;
+    }
+  }
+  return s;
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
