@@ -183,15 +183,6 @@
           <p id="phieu-summary" class="text-xs text-slate-500 mt-0.5">Chưa có sản phẩm nào trong phiếu.</p>
         </div>
         <div class="flex flex-wrap gap-2 items-center">
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-slate-500 whitespace-nowrap">Ngày xuất:</label>
-            <input id="ngay-xuat" type="date"
-              class="rounded-xl border border-slate-200 bg-paper/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-            <button id="btn-apply-date" type="button"
-              class="rounded-xl border border-slate-200 px-3 py-2 text-xs hover:bg-slate-50 whitespace-nowrap">
-              Áp dụng tất cả
-            </button>
-          </div>
           <button id="btn-xoa-phieu" type="button"
             class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-40"
             disabled>Xóa phiếu</button>
@@ -213,9 +204,9 @@
               <th class="px-4 py-3 font-semibold">Mã SP</th>
               <th class="px-4 py-3 font-semibold">Tên SP</th>
               <th class="px-4 py-3 font-semibold">Đơn vị</th>
-              <th class="px-4 py-3 font-semibold">Ngày xuất</th>
               <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
               <th class="px-4 py-3 font-semibold">Giá bán</th>
+              <th class="px-4 py-3 font-semibold text-right">Tổng tiền</th>
               <th class="px-4 py-3 font-semibold">Ghi chú</th>
               <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
             </tr>
@@ -299,6 +290,7 @@
               <th class="px-4 py-3 font-semibold">Tên SP</th>
               <th class="px-4 py-3 font-semibold w-28">Số lượng</th>
               <th class="px-4 py-3 font-semibold">Giá bán</th>
+              <th class="px-4 py-3 font-semibold text-right">Tổng tiền</th>
               <th class="px-4 py-3 font-semibold">Ghi chú</th>
               <th class="px-4 py-3 font-semibold text-right">Thao tác</th>
             </tr>
@@ -360,7 +352,7 @@
           <label class="block text-xs text-slate-500 mb-1">Tên SP</label>
           <input id="edit-productname" readonly class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm" />
         </div>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-slate-500 mb-1">Số lượng <span class="text-clay-600">*</span></label>
             <input id="edit-quantity" type="number" min="1" step="1"
@@ -371,12 +363,8 @@
             <input id="edit-sellingprice" type="number" min="0" step="1"
               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
           </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Giá nhập</label>
-            <input id="edit-purchaseprice" type="number" min="0" step="1"
-              class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-          </div>
         </div>
+        <input type="hidden" id="edit-purchaseprice" />
         <div>
           <label class="block text-xs text-slate-500 mb-1">Ghi chú</label>
           <input id="edit-note" type="text" maxlength="200"
@@ -387,6 +375,54 @@
             class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Hủy</button>
           <button id="btn-edit-save" type="button"
             class="rounded-xl bg-pine-700 hover:bg-pine-800 text-white px-4 py-2 text-sm font-medium">Lưu thay đổi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal xác nhận xuất Google Sheets -->
+    <div id="export-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+      <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 space-y-4">
+        <div class="flex items-center gap-2.5 text-pine-800">
+          <span class="p-2 bg-pine-100 rounded-xl text-pine-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+          </span>
+          <h3 class="text-base font-semibold">Xác nhận xuất lên Google Sheets</h3>
+        </div>
+        
+        <div class="bg-pine-50 rounded-xl p-3.5 space-y-1.5 text-xs text-pine-900 border border-pine-100">
+          <div class="flex justify-between">
+            <span class="text-slate-600">Số lượng mặt hàng:</span>
+            <span id="export-modal-count" class="font-semibold text-pine-900">0 dòng</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">Tổng số lượng sản phẩm:</span>
+            <span id="export-modal-qty" class="font-semibold text-pine-900">0</span>
+          </div>
+          <div class="flex justify-between text-sm pt-1.5 border-t border-pine-200/60">
+            <span class="font-medium text-pine-800">Tổng tiền bán:</span>
+            <span id="export-modal-total" class="font-bold text-pine-700">0 đ</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1.5">Chọn ngày xuất hàng <span class="text-clay-600">*</span></label>
+          <input id="export-modal-date" type="date"
+            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+          <p class="text-[11px] text-slate-400 mt-1">Ngày này sẽ được lưu nhớ tự động cho các lần xuất tiếp theo.</p>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-1">
+          <button id="btn-export-modal-cancel" type="button"
+            class="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 font-medium">Hủy</button>
+          <button id="btn-export-modal-confirm" type="button"
+            class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-5 py-2 text-sm font-medium shadow-card inline-flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+            Xác nhận xuất
+          </button>
         </div>
       </div>
     </div>
@@ -765,7 +801,6 @@
         productId: maSP,
         productName: tenSP,
         donVi: donVi || "",
-        date: $("ngay-xuat").value || todayInputValue(),
         quantity: 1,
         sellingPrice: giaBan,
         purchasePrice: giaNhap,
@@ -785,22 +820,20 @@
       $("btn-xuat-sheets").disabled = !hasRows;
 
       const tongSL = state.phieu.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+      const tongTien = state.phieu.reduce((sum, row) => sum + (Number(row.quantity || 0) * Number(row.sellingPrice || 0)), 0);
       $("phieu-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
       $("phieu-summary").textContent = hasRows
-        ? `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")}`
+        ? `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")} · Tổng tiền ${tongTien.toLocaleString("vi-VN")} đ`
         : "Chưa có sản phẩm nào trong phiếu.";
 
-      $("phieu-body").innerHTML = state.phieu.map((row, idx) => `
+      $("phieu-body").innerHTML = state.phieu.map((row, idx) => {
+        const rowTotal = (Number(row.quantity) || 0) * (Number(row.sellingPrice) || 0);
+        return `
         <tr data-id="${escapeHtml(row.id)}" class="${idx % 2 === 0 ? "bg-white" : "bg-slate-100/60"}">
           <td class="px-4 py-2.5 text-slate-400 text-xs">${idx + 1}</td>
           <td class="px-4 py-2.5 whitespace-nowrap font-mono text-xs">${escapeHtml(row.productId)}</td>
           <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName)}</td>
           <td class="px-4 py-2.5 text-slate-500">${escapeHtml(row.donVi || "—")}</td>
-          <td class="px-4 py-2.5">
-            <input type="date" value="${escapeHtml(row.date || todayInputValue())}"
-              data-action="date"
-              class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
-          </td>
           <td class="px-4 py-2.5">
             <div class="flex items-center gap-1">
               <button type="button" data-action="qty-dec"
@@ -817,6 +850,7 @@
               data-action="price"
               class="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
           </td>
+          <td class="px-4 py-2.5 text-right font-semibold text-pine-700 whitespace-nowrap" data-field="row-total">${rowTotal.toLocaleString("vi-VN")} đ</td>
           <td class="px-4 py-2.5">
             <input type="text" maxlength="200" value="${escapeHtml(row.note || "")}"
               data-action="note" placeholder="Ghi chú…"
@@ -827,10 +861,12 @@
               class="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Xóa</button>
           </td>
         </tr>
-      `).join("");
+      `}).join("");
 
       // Mobile cards
-      $("phieu-cards").innerHTML = state.phieu.map((row, idx) => `
+      $("phieu-cards").innerHTML = state.phieu.map((row, idx) => {
+        const rowTotal = (Number(row.quantity) || 0) * (Number(row.sellingPrice) || 0);
+        return `
         <div data-id="${escapeHtml(row.id)}" class="px-4 py-3 space-y-2 border-b border-slate-100 ${idx % 2 === 0 ? "bg-white" : "bg-slate-100/60"}">
           <div class="flex items-start justify-between gap-2">
             <div>
@@ -841,33 +877,30 @@
               class="shrink-0 rounded-lg px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 border border-red-100">Xóa</button>
           </div>
           <div class="space-y-2">
-            <!-- Số lượng — hàng riêng, nút to -->
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Số lượng</label>
-              <div class="flex items-center gap-2">
-                <button type="button" data-action="qty-dec"
-                  class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xl flex items-center justify-center">−</button>
-                <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
-                  data-action="qty"
-                  class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-base text-center font-semibold focus:outline-none focus:ring-2 focus:ring-pine-500" />
-                <button type="button" data-action="qty-inc"
-                  class="w-10 h-10 shrink-0 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xl flex items-center justify-center">+</button>
-              </div>
-            </div>
-            <!-- Ngày + Giá bán cùng hàng -->
+            <!-- Số lượng và Giá bán -->
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-xs text-slate-400 mb-1">Ngày xuất</label>
-                <input type="date" value="${escapeHtml(row.date || todayInputValue())}"
-                  data-action="date"
-                  class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                <label class="block text-xs text-slate-400 mb-1">Số lượng</label>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" data-action="qty-dec"
+                    class="w-9 h-9 shrink-0 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-lg flex items-center justify-center">−</button>
+                  <input type="number" min="1" step="1" value="${escapeHtml(String(row.quantity))}"
+                    data-action="qty"
+                    class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                  <button type="button" data-action="qty-inc"
+                    class="w-9 h-9 shrink-0 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-lg flex items-center justify-center">+</button>
+                </div>
               </div>
               <div>
                 <label class="block text-xs text-slate-400 mb-1">Giá bán</label>
                 <input type="number" min="0" step="1" value="${escapeHtml(String(row.sellingPrice))}"
                   data-action="price"
-                  class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500" />
               </div>
+            </div>
+            <div class="flex items-center justify-between text-xs bg-pine-50/70 rounded-lg px-3 py-1.5 border border-pine-100">
+              <span class="text-slate-500">Tổng tiền:</span>
+              <span data-field="row-total" class="font-bold text-pine-700 text-sm">${rowTotal.toLocaleString("vi-VN")} đ</span>
             </div>
             <!-- Ghi chú full width -->
             <div>
@@ -878,7 +911,7 @@
             </div>
           </div>
         </div>
-      `).join("");
+      `}).join("");
     }
 
     function updatePhieuField(id, field, value) {
@@ -894,13 +927,19 @@
         row.sellingPrice = n;
       } else if (field === "note") {
         row.note = value;
-      } else if (field === "date") {
-        row.date = value; // YYYY-MM-DD
       }
       row.updatedAt = unixNow();
+
+      // Cập nhật hiển thị thành tiền từng dòng
+      const rowTotal = (Number(row.quantity) || 0) * (Number(row.sellingPrice) || 0);
+      document.querySelectorAll(`[data-id="${id}"] [data-field="row-total"]`).forEach((el) => {
+        el.textContent = `${rowTotal.toLocaleString("vi-VN")} đ`;
+      });
+
       // Cập nhật summary mà không re-render toàn bộ
       const tongSL = state.phieu.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
-      $("phieu-summary").textContent = `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")}`;
+      const tongTien = state.phieu.reduce((sum, r) => sum + (Number(r.quantity || 0) * Number(r.sellingPrice || 0)), 0);
+      $("phieu-summary").textContent = `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")} · Tổng tiền ${tongTien.toLocaleString("vi-VN")} đ`;
     }
 
     function removeRow(id) {
@@ -923,12 +962,8 @@
         toast("Phiếu xuất đang trống, không thể xuất file.", "error");
         return;
       }
-      const ngayIso = $("ngay-xuat").value;
-      if (!ngayIso) {
-        toast("Vui lòng chọn ngày xuất.", "error");
-        return;
-      }
-      const date = formatNgayXuat(ngayIso);
+      const savedDate = localStorage.getItem("sam_pet_export_date") || todayInputValue();
+      const date = formatNgayXuat(savedDate);
       const now = unixNow();
       const lines = [EXPORT_HEADER.map(csvEscape).join(",")];
 
@@ -969,18 +1004,48 @@
       return SHEETS_URL;
     }
 
-    async function exportToSheets() {
-      const url = SHEETS_URL;
+    function openExportModal() {
       if (!state.phieu.length) {
         toast("Phiếu xuất đang trống.", "error");
         return;
       }
+      const count = state.phieu.length;
+      const tongSL = state.phieu.reduce((s, r) => s + Number(r.quantity || 0), 0);
+      const tongTien = state.phieu.reduce((s, r) => s + (Number(r.quantity || 0) * Number(r.sellingPrice || 0)), 0);
 
+      $("export-modal-count").textContent = `${count} dòng`;
+      $("export-modal-qty").textContent = tongSL.toLocaleString("vi-VN");
+      $("export-modal-total").textContent = `${tongTien.toLocaleString("vi-VN")} đ`;
+
+      // Lấy ngày đã lưu trước đó, nếu chưa có thì dùng ngày hôm nay
+      const savedDate = localStorage.getItem("sam_pet_export_date") || todayInputValue();
+      $("export-modal-date").value = savedDate;
+
+      $("export-modal").classList.remove("hidden");
+    }
+
+    function closeExportModal() {
+      $("export-modal").classList.add("hidden");
+    }
+
+    async function confirmExportToSheets() {
+      const selectedDate = $("export-modal-date").value;
+      if (!selectedDate) {
+        toast("Vui lòng chọn ngày xuất hàng.", "error");
+        return;
+      }
+
+      // Lưu lại ngày đã chọn cho các lần sau
+      localStorage.setItem("sam_pet_export_date", selectedDate);
+
+      const url = SHEETS_URL;
       const now = unixNow();
+      const dateFormatted = formatNgayXuat(selectedDate);
+
       const rows = state.phieu.map((row) => ({
-        id: row.id,
-        date: formatNgayXuat(row.date || todayInputValue()),
-        productId: row.productId,
+        id: "'" + String(row.id || "").replace(/^'+/, ''),
+        date: dateFormatted,
+        productId: "'" + String(row.productId || "").replace(/^'+/, ''),
         productName: row.productName,
         quantity: row.quantity,
         sellingPrice: row.sellingPrice,
@@ -990,8 +1055,9 @@
         updatedAt: row.updatedAt || now
       }));
 
-      $("btn-xuat-sheets").disabled = true;
-      $("btn-xuat-sheets").textContent = "Đang gửi…";
+      const btnConfirm = $("btn-export-modal-confirm");
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = `Đang gửi…`;
 
       try {
         await fetch(url, {
@@ -1004,12 +1070,13 @@
         // Xóa phiếu xuất sau khi gửi thành công
         state.phieu = [];
         renderPhieu();
+        closeExportModal();
         loadSheetHistory();
       } catch (err) {
         toast("Lỗi khi gửi lên Sheets: " + err.message, "error");
       } finally {
-        $("btn-xuat-sheets").disabled = !state.phieu.length;
-        $("btn-xuat-sheets").innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Xuất lên Google Sheets`;
+        btnConfirm.disabled = false;
+        btnConfirm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Xác nhận xuất`;
       }
     }
 
@@ -1136,6 +1203,9 @@
       $("history-body").innerHTML = filtered.map((row, idx) => {
         const checked = historySelected.has(row.id) ? "checked" : "";
         const rowBg = historySelected.has(row.id) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
+        const qty = Number(row.quantity || 0);
+        const price = Number(row.sellingPrice || 0);
+        const rowTotal = qty * price;
         return `
           <tr data-rowid="${escapeHtml(row.id)}" class="hover:bg-pine-50 ${rowBg}">
             <td class="px-3 py-2.5">
@@ -1147,6 +1217,7 @@
             <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName || "")}</td>
             <td class="px-4 py-2.5 text-right font-medium">${escapeHtml(String(row.quantity || ""))}</td>
             <td class="px-4 py-2.5 text-right whitespace-nowrap">${row.sellingPrice ? Number(row.sellingPrice).toLocaleString("vi-VN") : "—"}</td>
+            <td class="px-4 py-2.5 text-right font-semibold text-pine-700 whitespace-nowrap">${rowTotal ? rowTotal.toLocaleString("vi-VN") + " đ" : "—"}</td>
             <td class="px-4 py-2.5 text-slate-500 max-w-[12rem] truncate">${escapeHtml(row.note || "—")}</td>
             <td class="px-4 py-2.5 text-right whitespace-nowrap">
               <button type="button" data-action="editrow" data-rowid="${escapeHtml(row.id)}"
@@ -1159,6 +1230,9 @@
       $("history-cards").innerHTML = filtered.map((row, idx) => {
         const checked = historySelected.has(row.id) ? "checked" : "";
         const cardBg = historySelected.has(row.id) ? "bg-pine-50" : (idx % 2 === 0 ? "bg-white" : "bg-slate-100/60");
+        const qty = Number(row.quantity || 0);
+        const price = Number(row.sellingPrice || 0);
+        const rowTotal = qty * price;
         return `
           <div class="px-4 py-3 space-y-1.5 ${cardBg}">
             <div class="flex items-start justify-between gap-2">
@@ -1172,10 +1246,11 @@
               <button type="button" data-action="editrow" data-rowid="${escapeHtml(row.id)}"
                 class="shrink-0 rounded-lg px-2.5 py-1 text-xs text-pine-700 border border-pine-200 hover:bg-pine-50">Sửa</button>
             </div>
-            <div class="flex gap-4 text-xs text-slate-600 pl-6">
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 pl-6">
               <span>SL: <strong>${escapeHtml(String(row.quantity || ""))}</strong></span>
               <span>Giá: <strong>${row.sellingPrice ? Number(row.sellingPrice).toLocaleString("vi-VN") : "—"}</strong></span>
-              ${row.note ? `<span class="truncate">📝 ${escapeHtml(row.note)}</span>` : ""}
+              <span>Tổng: <strong class="text-pine-700 font-semibold">${rowTotal ? rowTotal.toLocaleString("vi-VN") + " đ" : "—"}</strong></span>
+              ${row.note ? `<span class="truncate w-full mt-0.5">📝 ${escapeHtml(row.note)}</span>` : ""}
             </div>
           </div>`;
       }).join("");
@@ -1201,7 +1276,7 @@
       $("history-error").classList.add("hidden");
 
       // Skeleton loading rows
-      const skeletonRow = `<tr>${Array(9).fill('<td class="px-4 py-3"><div class="h-3 bg-slate-100 rounded animate-pulse"></div></td>').join("")}</tr>`;
+      const skeletonRow = `<tr>${Array(10).fill('<td class="px-4 py-3"><div class="h-3 bg-slate-100 rounded animate-pulse"></div></td>').join("")}</tr>`;
       $("history-body").innerHTML = Array(5).fill(skeletonRow).join("");
       const skeletonCard = `<div class="px-4 py-3 space-y-2"><div class="h-3 bg-slate-100 rounded animate-pulse w-3/4"></div><div class="h-3 bg-slate-100 rounded animate-pulse w-1/2"></div></div>`;
       $("history-cards").innerHTML = Array(4).fill(skeletonCard).join("");
@@ -1213,6 +1288,8 @@
         if (data.status === "error") throw new Error(data.message);
         sheetHistory = (data.rows || []).map((r) => {
           r.date = normalizeDateVN(r.date);
+          if (r.id) r.id = String(r.id).replace(/^'+/, '');
+          if (r.productId) r.productId = String(r.productId).replace(/^'+/, '');
           return r;
         }).sort((a, b) => {
           // Chuyển DD-MM-YYYY → YYYY-MM-DD để so sánh chuỗi đúng thứ tự
@@ -1418,7 +1495,6 @@
         if (action === "qty")   updatePhieuField(id, "qty",   e.target.value);
         if (action === "price") updatePhieuField(id, "price", e.target.value);
         if (action === "note")  updatePhieuField(id, "note",  e.target.value);
-        if (action === "date")  updatePhieuField(id, "date",  e.target.value);
       });
     }
 
@@ -1426,14 +1502,6 @@
     attachPhieuChangeEvents("phieu-cards", "[data-id]");
     attachPhieuClickEvents("phieu-body",   "tr[data-id]");
     attachPhieuClickEvents("phieu-cards",  "[data-id]");
-
-    $("btn-apply-date").addEventListener("click", () => {
-      const val = $("ngay-xuat").value;
-      if (!val) { toast("Vui lòng chọn ngày trước.", "warning"); return; }
-      state.phieu.forEach((r) => { r.date = val; r.updatedAt = unixNow(); });
-      renderPhieu();
-      toast(`Đã áp dụng ngày ${formatNgayXuat(val)} cho tất cả dòng.`, "success");
-    });
 
     $("btn-xoa-phieu").addEventListener("click", () => {
       if (!state.phieu.length) return;
@@ -1445,7 +1513,12 @@
       }
     });
 
-    $("btn-xuat-sheets").addEventListener("click", exportToSheets);
+    $("btn-xuat-sheets").addEventListener("click", openExportModal);
+    $("btn-export-modal-cancel").addEventListener("click", closeExportModal);
+    $("btn-export-modal-confirm").addEventListener("click", confirmExportToSheets);
+    $("export-modal").addEventListener("click", (e) => {
+      if (e.target === $("export-modal")) closeExportModal();
+    });
 
     // Quản lý xuất hàng
     $("btn-reload-history").addEventListener("click", loadSheetHistory);
@@ -1523,7 +1596,6 @@
       if (e.target === $("edit-modal")) closeEditModal();
     });
 
-    $("ngay-xuat").value = todayInputValue();
     renderPhieu();
     loadProducts();
     loadSheetHistory();
