@@ -32,7 +32,7 @@ jobs:
           cache: 'npm'
 
       - name: Cài đặt dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build ứng dụng bằng Vite
         run: npm run build
