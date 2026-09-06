@@ -22,7 +22,7 @@ export function setLockDateLoading(isLoading) {
   const descEl = $("lock-date-status-desc");
 
   if (isLoading) {
-    if (textEl) textEl.textContent = "Đang kiểm tra…";
+    if (textEl) textEl.innerHTML = `<span class="sm:hidden">Tải…</span><span class="hidden sm:inline">Đang kiểm tra…</span>`;
     if (iconEl) {
       iconEl.innerHTML = `<svg class="animate-spin h-3.5 w-3.5 text-amber-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>`;
     }
@@ -46,19 +46,23 @@ export function updateLockDateUI() {
 
   if (lock) {
     const vnDate = formatLockDateVN(lock);
-    if (textEl) textEl.textContent = `Khóa: ≤ ${vnDate}`;
+    if (textEl) textEl.innerHTML = `<span class="sm:hidden">≤ ${vnDate.slice(0, 5)}</span><span class="hidden sm:inline">Khóa: ≤ ${vnDate}</span>`;
     if (descEl) descEl.innerHTML = `<span class="text-amber-700 font-semibold">Đang khóa sổ đến: ${vnDate}</span> (Không thể thêm/sửa/xóa từ ngày này trở về trước).`;
     if (inputEl) inputEl.value = toYMD(lock);
     if (btnOpen) {
       btnOpen.classList.add("bg-amber-500/25", "border-amber-400/50");
     }
+    const sideLock = $("sidebar-lock-status");
+    if (sideLock) sideLock.textContent = `≤ ${vnDate}`;
   } else {
-    if (textEl) textEl.textContent = "Khóa ngày";
+    if (textEl) textEl.innerHTML = `<span class="sm:hidden">Mở</span><span class="hidden sm:inline">Khóa ngày</span>`;
     if (descEl) descEl.textContent = "Hiện tại chưa đặt ngày khóa sổ.";
     if (inputEl) inputEl.value = "";
     if (btnOpen) {
       btnOpen.classList.remove("bg-amber-500/25", "border-amber-400/50");
     }
+    const sideLock = $("sidebar-lock-status");
+    if (sideLock) sideLock.textContent = "Chưa đặt";
   }
 }
 

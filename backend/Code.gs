@@ -663,7 +663,7 @@ function getOrCreateSheet(name, header) {
     sheet.appendRow(header);
     var headerRange = sheet.getRange(1, 1, 1, header.length);
     headerRange.setFontWeight("bold");
-    headerRange.setBackground("#134441");
+    headerRange.setBackground("#013755");
     headerRange.setFontColor("#ffffff");
     sheet.setFrozenRows(1);
   }

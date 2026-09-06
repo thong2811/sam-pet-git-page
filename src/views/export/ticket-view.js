@@ -50,8 +50,10 @@ export function renderPhieu() {
   const tongTien = state.phieu.reduce((sum, row) => sum + (Number(row.quantity || 0) * Number(row.sellingPrice || 0)), 0);
 
   if (state.activeTab === "xuat" && $("badge-chip")) {
-    $("badge-chip").textContent = `Phiếu: ${state.phieu.length} dòng`;
+    $("badge-chip").innerHTML = `<span class="sm:hidden font-bold">${state.phieu.length} dòng</span><span class="hidden sm:inline">Phiếu: ${state.phieu.length} dòng</span>`;
   }
+  const sideBadgeXuat = $("sidebar-badge-xuat");
+  if (sideBadgeXuat) sideBadgeXuat.textContent = `${state.phieu.length} dòng`;
   if ($("phieu-summary")) {
     $("phieu-summary").textContent = hasRows
       ? `${state.phieu.length} dòng · Tổng SL ${tongSL.toLocaleString("vi-VN")} · Tổng tiền ${tongTien.toLocaleString("vi-VN")} đ`

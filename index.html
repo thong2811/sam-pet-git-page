@@ -7,7 +7,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0f2f2a" />
+  <meta name="theme-color" content="#013755" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -19,6 +19,83 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body class="bg-paper text-ink min-h-screen">
+  <!-- ============================================================ -->
+  <!-- Màn Hình Khóa Xác Thực Nhân Viên (Staff PIN Pad Auth Screen) -->
+  <!-- ============================================================ -->
+  <div id="staff-auth-screen" class="fixed inset-0 z-[100] bg-gradient-to-b from-pine-950 via-[#013755] to-pine-950 text-white flex flex-col items-center justify-center p-4 select-none overflow-y-auto hidden">
+    <div class="w-full max-w-sm flex flex-col items-center text-center space-y-5 my-auto">
+      
+      <!-- Logo Cửa Hàng -->
+      <div class="relative">
+        <div class="h-20 w-20 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-white/15 bg-pine-900 mx-auto flex items-center justify-center">
+          <img src="icons/apple-touch-icon.png" alt="SamPet Logo" class="h-20 w-20 object-cover" />
+        </div>
+        <span class="absolute -bottom-1 -right-1 bg-amber-400 text-pine-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase tracking-wider">
+          Staff
+        </span>
+      </div>
+
+      <!-- Tiêu Đề -->
+      <div class="space-y-1">
+        <h1 class="text-xl font-black tracking-tight text-white">Xác Thực Nhân Viên</h1>
+        <p class="text-xs text-pine-200">Nhập mã PIN để truy cập hệ thống quản lý SamPet</p>
+      </div>
+
+      <!-- Vùng Chấm Tròn PIN (PIN Dots Indicator) -->
+      <div id="auth-pin-dots-container" class="flex items-center justify-center gap-3 py-2">
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+      </div>
+
+      <!-- Thông Báo Lỗi -->
+      <div id="auth-pin-error" class="text-xs text-red-300 bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-400/30 flex items-center gap-1.5 hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-red-300" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span id="auth-pin-error-text">Mã PIN không chính xác!</span>
+      </div>
+
+      <!-- Bàn Phím Số Ảo (PIN Pad) -->
+      <div class="grid grid-cols-3 gap-3 w-full max-w-[280px] pt-1">
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="1">1</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="2">2</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="3">3</button>
+
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="4">4</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="5">5</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="6">6</button>
+
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="7">7</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="8">8</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="9">9</button>
+
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/25 text-xs font-bold text-pine-200 transition-all active:scale-95 uppercase tracking-wider" data-key="clear">Xóa Hết</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="0">0</button>
+        <button type="button" class="pin-key h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/25 text-lg font-bold text-pine-200 transition-all active:scale-95 flex items-center justify-center" data-key="backspace" aria-label="Xóa 1 số">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414-6.414a2 2 0 011.414-.586H19a2 2 0 012 2v10a2 2 0 01-2 2h-9.172a2 2 0 01-1.414-.586L3 12z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Hướng dẫn & Nút chuyển sang Trang Khách Hàng -->
+      <div class="pt-3 border-t border-white/10 w-full space-y-2">
+        <p class="text-[11px] text-pine-300/80">Thiết bị sẽ ghi nhớ đăng nhập trong 7 ngày</p>
+        <a href="./grooming.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 transition-colors py-1">
+          <span>✂️ Bạn là khách hàng? Xem mẫu Grooming tại đây</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Splash screen -->
   <div id="splash">
     <img src="icons/apple-touch-icon.png" alt="SamPet" />
@@ -33,59 +110,193 @@
   </div>
 
   <header class="bg-pine-900 text-white sticky top-0 z-30 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl shadow-lift overflow-hidden shrink-0">
-          <img src="icons/apple-touch-icon.png" alt="SamPet logo" class="h-11 w-11 object-cover" />
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+      
+      <!-- Bên Trái: Nút Menu Hamburger Mở Sidebar + Logo + Tiêu Đề -->
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <!-- Nút mở Left Sidebar Menu -->
+        <button id="btn-open-sidebar" type="button" aria-label="Mở menu điều hướng"
+          class="flex items-center justify-center h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white border border-white/15 transition-all active:scale-95 shrink-0"
+          title="Mở Menu Điều Hướng">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <span class="hidden md:inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shadow-md overflow-hidden shrink-0">
+          <img src="icons/apple-touch-icon.png" alt="SamPet logo" class="h-8 w-8 sm:h-9 sm:w-9 object-cover" />
         </span>
-        <div>
-          <div class="flex items-center gap-2">
-            <p class="text-xs uppercase tracking-[0.18em] text-pine-100/80 font-medium">Sam Pet</p>
-            <span class="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono text-pine-100">v2.0</span>
+
+        <div class="min-w-0">
+          <div class="hidden md:flex items-center gap-1.5">
+            <p class="text-[10px] uppercase tracking-[0.16em] text-pine-100/80 font-semibold">Sam Pet</p>
+            <span class="text-[9px] bg-white/15 px-1.5 py-0.2 rounded-full font-mono text-pine-100">v2.0</span>
           </div>
-          <h1 id="header-title" class="text-lg sm:text-xl font-semibold leading-tight">Phiếu xuất hàng hàng ngày</h1>
+          <h1 id="header-title" class="text-sm sm:text-base font-bold leading-tight whitespace-nowrap">
+            <span class="md:hidden">Xuất Hàng</span>
+            <span class="hidden md:inline">Phiếu xuất hàng hàng ngày</span>
+          </h1>
         </div>
       </div>
 
-      <!-- Tab Switcher -->
-      <div class="flex items-center bg-black/25 p-1 rounded-xl border border-white/10 self-start sm:self-auto">
+      <!-- Giữa: Tab Switcher (Chỉ hiện trên Desktop để 1 chạm tiện lợi) -->
+      <div class="hidden md:inline-flex items-center bg-black/30 p-1 rounded-xl border border-white/10 shrink-0">
         <button id="tab-btn-xuat" type="button"
-          class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white text-pine-900 shadow-sm">
+          class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap bg-white text-pine-900 shadow-sm active:scale-95">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          Xuất Hàng
+          <span>Xuất Hàng</span>
         </button>
         <button id="tab-btn-chiet" type="button"
-          class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-white/80 hover:text-white">
+          class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap text-white/80 hover:text-white active:scale-95">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
           </svg>
-          Chiết Hàng
+          <span>Chiết Hàng</span>
         </button>
       </div>
 
-      <!-- Status chips & Lock Date -->
-      <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+      <!-- Bên Phải: Grooming button (Desktop) + Khóa Ngày & Badge -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 text-xs">
+        <a href="./grooming.html" target="_blank"
+          class="hidden lg:flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 hover:text-white border border-amber-400/30 shadow-xs whitespace-nowrap active:scale-95"
+          title="Mở Trang Quảng Cáo Mẫu Grooming Cho Khách (Mở tab mới)">
+          <span>✂️ Mẫu Grooming</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+
         <button id="btn-open-lock-date-modal" type="button"
-          class="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 px-3 py-1.5 transition-all border border-white/15 cursor-pointer shadow-xs">
+          class="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 px-2.5 py-1 sm:px-3 sm:py-1.5 transition-all border border-white/15 cursor-pointer shadow-xs whitespace-nowrap">
           <span id="lock-date-header-icon" class="inline-flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
             </svg>
           </span>
-          <span id="lock-date-header-text" class="text-xs font-medium text-pine-100">Khóa ngày</span>
+          <span id="lock-date-header-text" class="text-[11px] sm:text-xs font-medium text-pine-100">Khóa ngày</span>
         </button>
-        <span id="status-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+
+        <span id="status-chip" class="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] sm:text-xs whitespace-nowrap">
           <span class="h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
-          Đang tải sản phẩm…
+          Đang tải…
         </span>
-        <span id="badge-chip" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
-          Phiếu: 0 dòng
+
+        <span id="badge-chip" class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-white whitespace-nowrap shadow-xs">
+          <span class="sm:hidden font-bold">0 dòng</span>
+          <span class="hidden sm:inline">Phiếu: 0 dòng</span>
         </span>
       </div>
     </div>
   </header>
+
+  <!-- ============================================================ -->
+  <!-- Left Sidebar Drawer: Menu Điều Hướng Bên Trái               -->
+  <!-- ============================================================ -->
+  <div id="sidebar-drawer-backdrop" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+  <aside id="sidebar-drawer" aria-label="Menu điều hướng nhân viên"
+    class="fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-pine-950 text-white shadow-2xl -translate-x-full transition-transform duration-300 ease-out flex flex-col justify-between border-r border-white/10">
+    
+    <!-- Phần Trên Cùng -->
+    <div>
+      <div class="p-4 border-b border-white/10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl shadow-lift overflow-hidden shrink-0 bg-pine-900">
+            <img src="icons/apple-touch-icon.png" alt="SamPet logo" class="h-10 w-10 object-cover" />
+          </span>
+          <div>
+            <h2 class="text-sm font-black tracking-tight text-white">Sam Pet 2.0</h2>
+            <span class="text-[10px] text-pine-200">Quản Lý Xuất & Chiết Hàng</span>
+          </div>
+        </div>
+        <button type="button" id="btn-close-sidebar" aria-label="Đóng menu"
+          class="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white flex items-center justify-center transition-all">
+          ✕
+        </button>
+      </div>
+
+      <!-- Danh Sách Menu Điều Hướng -->
+      <nav class="p-3 space-y-1.5">
+        <p class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-pine-300/60">Nghiệp Vụ Kho</p>
+        
+        <!-- Tab Xuất Hàng -->
+        <button type="button" id="sidebar-btn-xuat"
+          class="sidebar-nav-item w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md">
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>Phiếu Xuất Hàng</span>
+          </div>
+          <span id="sidebar-badge-xuat" class="text-[10px] px-2 py-0.5 rounded-full bg-pine-100 text-pine-900 font-mono font-bold">0 dòng</span>
+        </button>
+
+        <!-- Tab Chiết Hàng -->
+        <button type="button" id="sidebar-btn-chiet"
+          class="sidebar-nav-item w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white">
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <span>Chiết Hàng & Đóng Gói</span>
+          </div>
+          <span id="sidebar-badge-chiet" class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-pine-200 font-mono">0 SP</span>
+        </button>
+
+        <div class="my-3 border-t border-white/10"></div>
+        <p class="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-pine-300/60">Tiện Ích & Khách Hàng</p>
+
+        <!-- Mẫu Grooming Khách Hàng -->
+        <a href="./grooming.html" target="_blank"
+          class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/20 active:scale-95">
+          <div class="flex items-center gap-3">
+            <span class="text-sm">✂️</span>
+            <span>Mẫu Grooming Khách Hàng</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+
+        <!-- Khóa Ngày Sổ Sách -->
+        <button type="button" id="sidebar-btn-lock-date"
+          class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white active:scale-95">
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+            <span>Khóa Ngày Sổ Sách</span>
+          </div>
+          <span class="text-[10px] text-amber-300 font-mono">PIN 🔒</span>
+        </button>
+
+        <div class="my-2 border-t border-white/10"></div>
+
+        <!-- Đăng Xuất (Khóa Ứng Dụng) -->
+        <button type="button" id="sidebar-btn-logout"
+          class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 active:scale-95">
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Đăng Xuất (Khóa App)</span>
+          </div>
+          <span class="text-[10px] text-red-400 font-mono">🔒</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Chân Sidebar: Thông Tin Hệ Thống -->
+    <div class="p-4 border-t border-white/10 bg-black/25 space-y-2">
+      <div class="flex items-center justify-between text-[11px] text-pine-200">
+        <span>Kho hàng:</span>
+        <span id="sidebar-csv-status" class="font-medium text-white">493 SP</span>
+      </div>
+      <p class="text-[10px] text-pine-300/50 text-center pt-2">SamPet Web App v2.0</p>
+    </div>
+  </aside>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 

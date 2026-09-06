@@ -22,7 +22,7 @@ body {
 }
 
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: #b7cfc8;
+  background: #bee0f3;
   border-radius: 99px;
 }
 
@@ -50,7 +50,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 999;
-  background: #0f2f2a;
+  background: #013755;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -74,7 +74,7 @@ body {
 }
 
 #splash p {
-  color: #d5ebe4;
+  color: #dcedf8;
   font-size: 14px;
   letter-spacing: 0.05em;
 }
@@ -99,7 +99,7 @@ body {
   justify-content: center;
   height: 0;
   overflow: hidden;
-  background: #134441;
+  background: #0a476c;
   color: #fff;
   font-size: 13px;
   gap: 8px;
@@ -123,4 +123,44 @@ body {
 
 .ptr-spinner {
   animation: ptr-spin 0.7s linear infinite;
+}
+
+/* Grooming Showcase Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(1, 55, 85, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(1, 55, 85, 0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite;
+}
+
+/* Staff Auth PIN Screen Shake */
+@keyframes authShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.animate-auth-shake {
+  animation: authShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }

@@ -117,8 +117,10 @@ export function renderRepackageTargets() {
   if ($("repackage-target-count-badge")) $("repackage-target-count-badge").textContent = targets.length;
 
   if (state.activeTab === "chiet" && $("badge-chip")) {
-    $("badge-chip").textContent = `Đích: ${targets.length} SP`;
+    $("badge-chip").innerHTML = `<span class="sm:hidden font-bold">${targets.length} SP</span><span class="hidden sm:inline">Đích: ${targets.length} SP</span>`;
   }
+  const sideBadgeChiet = $("sidebar-badge-chiet");
+  if (sideBadgeChiet) sideBadgeChiet.textContent = `${targets.length} SP`;
 
   const tbody = $("repackage-targets-body");
   if (tbody) {
