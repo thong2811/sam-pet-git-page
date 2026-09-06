@@ -1,0 +1,25 @@
+{
+  "name": "SamPet — Phiếu xuất hàng",
+  "short_name": "SamPet",
+  "description": "Lập phiếu xuất hàng hàng ngày cho cửa hàng SamPet",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f2f2a",
+  "theme_color": "#0f2f2a",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
