@@ -6,7 +6,7 @@ import { toast } from "../../utils/toast.js";
 import { formatNgayXuat, formatLockDateVN, unixNow, todayInputValue, escapeHtml } from "../../utils/formatters.js";
 import { state, isDateLocked, getLockDate, genLineId, getField } from "../../state/app-state.js";
 import { saveRepackageAPI } from "../../services/api.js";
-import { findProductByMa } from "../xuat-hang/products-view.js";
+import { findProductByMa } from "../export/products-view.js";
 import { getMinAllowedDate } from "../common/lock-date-modal.js";
 
 let onRepackageSuccessCallback = null;

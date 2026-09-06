@@ -6,7 +6,7 @@ import { toast } from "../../utils/toast.js";
 import { formatNgayXuat, formatLockDateVN, unixNow, todayInputValue } from "../../utils/formatters.js";
 import { state, isDateLocked, getLockDate } from "../../state/app-state.js";
 import { appendPhieuXuatAPI } from "../../services/api.js";
-import { renderPhieu } from "./phieu-view.js";
+import { renderPhieu } from "./ticket-view.js";
 import { getMinAllowedDate } from "../common/lock-date-modal.js";
 
 let onExportSuccessCallback = null;

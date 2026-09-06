@@ -5,7 +5,7 @@ import { $ } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
 import { escapeHtml, labelFor, formatCell } from "../../utils/formatters.js";
 import { state, getField } from "../../state/app-state.js";
-import { addToPhieu } from "./phieu-view.js";
+import { addToPhieu } from "./ticket-view.js";
 
 export function orderedColumns() {
   return [

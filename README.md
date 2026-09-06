@@ -125,8 +125,8 @@ sam-pet-git-page/
 │   │   ├── formatters.js           # Format tiền, ngày tháng, chuẩn hóa ngày VN, parse CSV
 │   │   └── toast.js                # Thông báo nổi (Toast)
 │   └── views/
-│       ├── xuat-hang/              # Các view và modal của chức năng Xuất Hàng
-│       ├── chiet-hang/             # Các view và modal của chức năng Chiết Hàng
+│       ├── export/                 # Các view và modal của chức năng Xuất Hàng (products-view, ticket-view, history-view, export-modal)
+│       ├── repackage/              # Các view và modal của chức năng Chiết Hàng (repackage-form, repackage-history, repackage-modal)
 │       └── common/                 # Các modal dùng chung (Khóa ngày, sửa dòng)
 ├── scripts/
 │   └── deploy.js                   # Script tự động deploy Clasp & giữ nguyên URL

@@ -12,15 +12,15 @@ import { loadProductsData } from "./services/api.js";
 import { initLockDateModal, fetchLockDate } from "./views/common/lock-date-modal.js";
 import { initEditRowModal } from "./views/common/edit-row-modal.js";
 
-// Xuất Hàng views
-import { initProductsView, renderProductHead, renderProducts } from "./views/xuat-hang/products-view.js";
-import { initPhieuView, renderPhieu } from "./views/xuat-hang/phieu-view.js";
-import { initExportModal } from "./views/xuat-hang/export-modal.js";
-import { initHistoryView, loadSheetHistory } from "./views/xuat-hang/history-view.js";
+// Export views
+import { initProductsView, renderProductHead, renderProducts } from "./views/export/products-view.js";
+import { initPhieuView, renderPhieu } from "./views/export/ticket-view.js";
+import { initExportModal } from "./views/export/export-modal.js";
+import { initHistoryView, loadSheetHistory } from "./views/export/history-view.js";
 
-// Chiết Hàng views
-import { initRepackageForm, renderRepackageTargets } from "./views/chiet-hang/repackage-form.js";
-import { initRepackageHistory, loadRepackageHistory } from "./views/chiet-hang/repackage-history.js";
+// Repackage views
+import { initRepackageForm, renderRepackageTargets } from "./views/repackage/repackage-form.js";
+import { initRepackageHistory, loadRepackageHistory } from "./views/repackage/repackage-history.js";
 
 export function hideSplash() {
   const splash = $("splash");

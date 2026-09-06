@@ -5,7 +5,7 @@ import { $ } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
 import { escapeHtml } from "../../utils/formatters.js";
 import { state, genLineId, getField } from "../../state/app-state.js";
-import { findProductByMa, filterProducts } from "../xuat-hang/products-view.js";
+import { findProductByMa, filterProducts } from "../export/products-view.js";
 import { openRepackageModal, initRepackageModal } from "./repackage-modal.js";
 
 export function renderRepackageSourceDropdown(query = "") {
