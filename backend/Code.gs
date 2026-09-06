@@ -174,6 +174,18 @@ function actionAppend(payload) {
     return jsonResponse({ status: "error", message: "Không có dữ liệu rows." });
   }
 
+  // Chặn ghi vào ngày đã bị khóa sổ
+  for (var rIdx = 0; rIdx < rows.length; rIdx++) {
+    var r = rows[rIdx];
+    if (r && r.date && isDateLockedBackend(r.date)) {
+      var formattedD = normalizeDateString(r.date);
+      return jsonResponse({
+        status: "error",
+        message: "Không thể thêm dữ liệu: Ngày " + formattedD + " đã bị khóa sổ."
+      });
+    }
+  }
+
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(LOCK_TIMEOUT_MS);
@@ -251,17 +263,34 @@ function actionDelete(payload) {
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
     var idColIdx = headers.indexOf("id");
     if (idColIdx === -1) idColIdx = 0;
+    var dateColIdx = headers.indexOf("date");
 
-    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
+    var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     var idSet = {};
     ids.forEach(function(id) {
       var clean = String(id).replace(/^'+/, '').trim();
       idSet[clean] = true;
     });
 
+    // Chặn xóa nếu có dòng thuộc ngày đã bị khóa sổ
+    if (dateColIdx !== -1) {
+      for (var k = 0; k < allData.length; k++) {
+        var rowId = String(allData[k][idColIdx]).replace(/^'+/, '').trim();
+        if (idSet[rowId]) {
+          var rowDate = allData[k][dateColIdx];
+          if (isDateLockedBackend(rowDate)) {
+            return jsonResponse({
+              status: "error",
+              message: "Không thể xóa: Dữ liệu thuộc ngày đã bị khóa sổ (" + normalizeDateString(rowDate) + ")."
+            });
+          }
+        }
+      }
+    }
+
     var deleted = 0;
-    for (var i = idCol.length - 1; i >= 0; i--) {
-      var cellId = String(idCol[i][0]).replace(/^'+/, '').trim();
+    for (var i = allData.length - 1; i >= 0; i--) {
+      var cellId = String(allData[i][idColIdx]).replace(/^'+/, '').trim();
       if (idSet[cellId]) {
         sheet.deleteRow(i + 2);
         deleted++;
@@ -278,6 +307,14 @@ function actionUpdate(payload) {
   var row = payload.row;
   if (!row || !row.id) {
     return jsonResponse({ status: "error", message: "Thiếu id trong row." });
+  }
+
+  // 1. Chặn nếu ngày mới bị khóa sổ
+  if (row.date && isDateLockedBackend(row.date)) {
+    return jsonResponse({
+      status: "error",
+      message: "Không thể cập nhật: Ngày mới (" + normalizeDateString(row.date) + ") đã bị khóa sổ."
+    });
   }
 
   var lock = LockService.getScriptLock();
@@ -298,6 +335,7 @@ function actionUpdate(payload) {
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
     var idColIdx = headers.indexOf("id");
     if (idColIdx === -1) idColIdx = 0;
+    var dateColIdx = headers.indexOf("date");
 
     var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
     var targetRow = -1;
@@ -315,6 +353,18 @@ function actionUpdate(payload) {
     }
 
     var currentValues = sheet.getRange(targetRow, 1, 1, lastCol).getValues()[0];
+
+    // 2. Chặn nếu ngày hiện tại của dòng trên Sheet đã bị khóa sổ
+    if (dateColIdx !== -1) {
+      var currentDate = currentValues[dateColIdx];
+      if (isDateLockedBackend(currentDate)) {
+        return jsonResponse({
+          status: "error",
+          message: "Không thể chỉnh sửa: Dữ liệu này thuộc ngày đã bị khóa sổ (" + normalizeDateString(currentDate) + ")."
+        });
+      }
+    }
+
     var rowObj = {};
     headers.forEach(function(h, idx) { rowObj[h] = currentValues[idx]; });
 
@@ -345,6 +395,18 @@ function actionRepackage(payload) {
   var rows = payload.rows;
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
     return jsonResponse({ status: "error", message: "Không có dữ liệu rows chiết hàng." });
+  }
+
+  // Chặn thêm chiết hàng vào ngày đã bị khóa sổ
+  for (var rIdx = 0; rIdx < rows.length; rIdx++) {
+    var r = rows[rIdx];
+    if (r && r.date && isDateLockedBackend(r.date)) {
+      var formattedD = normalizeDateString(r.date);
+      return jsonResponse({
+        status: "error",
+        message: "Không thể thêm chiết hàng: Ngày " + formattedD + " đã bị khóa sổ."
+      });
+    }
   }
 
   var lock = LockService.getScriptLock();
@@ -436,17 +498,34 @@ function actionRepackageDelete(payload) {
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
     var idColIdx = headers.indexOf("id");
     if (idColIdx === -1) idColIdx = 0;
+    var dateColIdx = headers.indexOf("date");
 
-    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
+    var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     var idSet = {};
     ids.forEach(function(id) {
       var clean = String(id).replace(/^'+/, '').trim();
       idSet[clean] = true;
     });
 
+    // Chặn xóa chiết hàng nếu có dòng thuộc ngày đã bị khóa sổ
+    if (dateColIdx !== -1) {
+      for (var k = 0; k < allData.length; k++) {
+        var rowId = String(allData[k][idColIdx]).replace(/^'+/, '').trim();
+        if (idSet[rowId]) {
+          var rowDate = allData[k][dateColIdx];
+          if (isDateLockedBackend(rowDate)) {
+            return jsonResponse({
+              status: "error",
+              message: "Không thể xóa chiết hàng: Dữ liệu thuộc ngày đã bị khóa sổ (" + normalizeDateString(rowDate) + ")."
+            });
+          }
+        }
+      }
+    }
+
     var deleted = 0;
-    for (var i = idCol.length - 1; i >= 0; i--) {
-      var cellId = String(idCol[i][0]).replace(/^'+/, '').trim();
+    for (var i = allData.length - 1; i >= 0; i--) {
+      var cellId = String(allData[i][idColIdx]).replace(/^'+/, '').trim();
       if (idSet[cellId]) {
         sheet.deleteRow(i + 2);
         deleted++;
@@ -469,6 +548,17 @@ function actionRepackageUpdate(payload) {
 
   if (rowsToUpdate.length === 0) {
     return jsonResponse({ status: "error", message: "Thiếu dữ liệu rows / row trong action repackage_update." });
+  }
+
+  // 1. Chặn nếu ngày mới bị khóa sổ
+  for (var uIdx = 0; uIdx < rowsToUpdate.length; uIdx++) {
+    var uRow = rowsToUpdate[uIdx];
+    if (uRow && uRow.date && isDateLockedBackend(uRow.date)) {
+      return jsonResponse({
+        status: "error",
+        message: "Không thể cập nhật chiết hàng: Ngày mới (" + normalizeDateString(uRow.date) + ") đã bị khóa sổ."
+      });
+    }
   }
 
   var lock = LockService.getScriptLock();
@@ -498,12 +588,32 @@ function actionRepackageUpdate(payload) {
 
     var idColIdx = headers.indexOf("id");
     if (idColIdx === -1) idColIdx = 0;
+    var dateColIdx = headers.indexOf("date");
 
-    var idCol = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
+    var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     var idToRowIndex = {};
-    for (var i = 0; i < idCol.length; i++) {
-      var rawId = String(idCol[i][0]).replace(/^'+/, '').trim();
+    for (var i = 0; i < allData.length; i++) {
+      var rawId = String(allData[i][idColIdx]).replace(/^'+/, '').trim();
       idToRowIndex[rawId] = i + 2;
+    }
+
+    // 2. Chặn nếu ngày hiện tại của các dòng chiết hàng trên Sheet đã bị khóa sổ
+    if (dateColIdx !== -1) {
+      for (var j = 0; j < rowsToUpdate.length; j++) {
+        var rCheck = rowsToUpdate[j];
+        if (!rCheck || !rCheck.id) continue;
+        var rTargetId = String(rCheck.id).replace(/^'+/, '').trim();
+        var rTargetRow = idToRowIndex[rTargetId];
+        if (rTargetRow) {
+          var currDate = allData[rTargetRow - 2][dateColIdx];
+          if (isDateLockedBackend(currDate)) {
+            return jsonResponse({
+              status: "error",
+              message: "Không thể cập nhật chiết hàng: Dữ liệu thuộc ngày đã bị khóa sổ (" + normalizeDateString(currDate) + ")."
+            });
+          }
+        }
+      }
     }
 
     var updatedCount = 0;
@@ -532,7 +642,6 @@ function actionRepackageUpdate(payload) {
 
       sheet.getRange(targetRow, 1, 1, lastCol).setValues([newRowValues]);
 
-      var dateColIdx = headers.indexOf("date");
       if (dateColIdx !== -1) {
         sheet.getRange(targetRow, dateColIdx + 1, 1, 1).setNumberFormat("@");
       }
@@ -581,22 +690,44 @@ function normalizeDateString(val) {
   return s;
 }
 
-function toYMDBackend(dateStr) {
-  if (!dateStr) return "";
-  var s = String(dateStr).trim();
+function toYMDBackend(dateVal) {
+  if (!dateVal) return "";
+  if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+    var y = dateVal.getFullYear();
+    var m = dateVal.getMonth() + 1;
+    var d = dateVal.getDate();
+    return y + "-" + (m < 10 ? "0" + m : m) + "-" + (d < 10 ? "0" + d : d);
+  }
+  var s = String(dateVal).trim();
   var parts = s.split("-");
   if (parts.length === 3) {
-    if (parts[0].length === 4) return s; // YYYY-MM-DD
-    return parts[2] + "-" + parts[1] + "-" + parts[0]; // DD-MM-YYYY -> YYYY-MM-DD
+    if (parts[0].length === 4) {
+      var pY = parts[0];
+      var pM = parts[1].length === 1 ? "0" + parts[1] : parts[1];
+      var pD = parts[2].length === 1 ? "0" + parts[2] : parts[2];
+      return pY + "-" + pM + "-" + pD; // YYYY-MM-DD
+    }
+    var pD = parts[0].length === 1 ? "0" + parts[0] : parts[0];
+    var pM = parts[1].length === 1 ? "0" + parts[1] : parts[1];
+    var pY = parts[2];
+    return pY + "-" + pM + "-" + pD; // DD-MM-YYYY -> YYYY-MM-DD
+  }
+  var parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    var py = parsed.getFullYear();
+    var pm = parsed.getMonth() + 1;
+    var pd = parsed.getDate();
+    return py + "-" + (pm < 10 ? "0" + pm : pm) + "-" + (pd < 10 ? "0" + pd : pd);
   }
   return s;
 }
 
-function isDateLockedBackend(dateStr) {
+function isDateLockedBackend(dateVal) {
   var lockDate = getGlobalLockDate();
-  if (!lockDate || !dateStr) return false;
-  var dYmd = toYMDBackend(dateStr);
+  if (!lockDate || !dateVal) return false;
+  var dYmd = toYMDBackend(dateVal);
   var lockYmd = toYMDBackend(lockDate);
+  if (!dYmd || !lockYmd) return false;
   return dYmd <= lockYmd;
 }
 

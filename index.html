@@ -1658,13 +1658,17 @@
       btnConfirm.innerHTML = `Đang gửi…`;
 
       try {
-        await fetch(url, {
+        const res = await fetch(url, {
           method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ rows })
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "append", rows })
         });
-        toast("Đã gửi " + rows.length + " dòng lên Google Sheets!", "success");
+        const data = await res.json();
+        if (data && data.status === "error") {
+          toast(data.message || "Lỗi khi lưu lên Sheets.", "error");
+          return;
+        }
+        toast(data.message || ("Đã gửi " + rows.length + " dòng lên Google Sheets!"), "success");
         state.phieu = [];
         renderPhieu();
         closeExportModal();
@@ -1884,13 +1888,17 @@
       $("btn-history-delete").textContent = "Đang xóa…";
 
       try {
-        await fetch(SHEETS_URL, {
+        const res = await fetch(SHEETS_URL, {
           method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "delete", ids })
         });
-        toast(`Đã xóa ${ids.length} dòng.`, "success");
+        const data = await res.json();
+        if (data && data.status === "error") {
+          toast(data.message || "Lỗi khi xóa dòng đã chọn.", "error");
+          return;
+        }
+        toast(data.message || `Đã xóa ${ids.length} dòng.`, "success");
         historySelected.clear();
         await loadSheetHistory();
       } catch (err) {
@@ -1986,10 +1994,9 @@
       $("btn-edit-save").textContent = "Đang lưu…";
 
       try {
-        await fetch(SHEETS_URL, {
+        const res = await fetch(SHEETS_URL, {
           method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             action: "update",
             row: {
@@ -2003,6 +2010,11 @@
             }
           })
         });
+        const data = await res.json();
+        if (data && data.status === "error") {
+          toast(data.message || "Lỗi khi cập nhật.", "error");
+          return;
+        }
         const local = sheetHistory.find((r) => r.id === id);
         if (local) {
           if (dateIso) local.date = formatNgayXuat(dateIso);
@@ -2011,7 +2023,7 @@
           local.purchasePrice = String(purchasePrice);
           local.note          = note;
         }
-        toast("Đã cập nhật thành công.", "success");
+        toast(data.message || "Đã cập nhật thành công.", "success");
         closeEditModal();
         await loadSheetHistory();
       } catch (err) {
@@ -2557,18 +2569,22 @@
       btnConfirm.innerHTML = `Đang xử lý…`;
 
       try {
-        await fetch(SHEETS_URL, {
+        const res = await fetch(SHEETS_URL, {
           method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             action: "repackage",
             type: "repackage",
             rows: newRows
           })
         });
+        const data = await res.json();
+        if (data && data.status === "error") {
+          toast(data.message || "Lỗi khi đồng bộ chiết hàng.", "error");
+          return;
+        }
 
-        toast(`Chiết hàng thành công! Đã ghi nhận phiếu chiết gồm ${newRows.length} mặt hàng đích.`, "success");
+        toast(data.message || `Chiết hàng thành công! Đã ghi nhận phiếu chiết gồm ${newRows.length} mặt hàng đích.`, "success");
         closeRepackageModal();
         resetRepackageForm();
         await loadRepackageHistory();
@@ -2840,17 +2856,20 @@
         });
         const idsToDelete = rowsToDelete.map((r) => r.id);
 
-        repackageHistory = repackageHistory.filter((r) => !idsToDelete.includes(r.id));
-
         if (idsToDelete.length > 0) {
-          await fetch(SHEETS_URL, {
+          const res = await fetch(SHEETS_URL, {
             method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain" },
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ action: "repackage_delete", ids: idsToDelete })
           });
+          const data = await res.json();
+          if (data && data.status === "error") {
+            toast(data.message || "Lỗi khi xóa chiết hàng.", "error");
+            return;
+          }
         }
 
+        repackageHistory = repackageHistory.filter((r) => !idsToDelete.includes(r.id));
         toast(`Đã xóa ${selectedSessionIds.length} phiếu chiết hàng (${idsToDelete.length} dòng quy cách).`, "success");
         repackageSelected.clear();
         renderRepackageHistory();
@@ -2989,6 +3008,32 @@
         const now = unixNow();
         const dateFormatted = dateIso ? formatNgayXuat(dateIso) : undefined;
 
+        const rowsPayload = targetUpdates.map((tu, idx) => ({
+          id: tu.id,
+          sessionId: sessionId,
+          date: dateFormatted,
+          fromQuantity: idx === 0 ? fromQty : 0,
+          sessionFromQty: fromQty,
+          toQuantity: tu.toQuantity,
+          note: tu.note,
+          updatedAt: now
+        }));
+
+        const res = await fetch(SHEETS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "repackage_update",
+            rows: rowsPayload
+          })
+        });
+        const data = await res.json();
+        if (data && data.status === "error") {
+          toast(data.message || "Lỗi khi cập nhật chiết hàng.", "error");
+          return;
+        }
+
+        // Cập nhật dữ liệu local sau khi server xác nhận thành công
         targetUpdates.forEach((tu, idx) => {
           const cleanTuId = String(tu.id).replace(/^'+/, '').trim();
           const row = repackageHistory.find((r) => String(r.id).replace(/^'+/, '').trim() === cleanTuId);
@@ -3002,28 +3047,7 @@
           }
         });
 
-        const rowsPayload = targetUpdates.map((tu, idx) => ({
-          id: tu.id,
-          sessionId: sessionId,
-          date: dateFormatted,
-          fromQuantity: idx === 0 ? fromQty : 0,
-          sessionFromQty: fromQty,
-          toQuantity: tu.toQuantity,
-          note: tu.note,
-          updatedAt: now
-        }));
-
-        await fetch(SHEETS_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            action: "repackage_update",
-            rows: rowsPayload
-          })
-        });
-
-        toast("Đã cập nhật phiếu chiết hàng.", "success");
+        toast(data.message || "Đã cập nhật phiếu chiết hàng.", "success");
         closeRepackageEditModal();
         renderRepackageHistory();
       } catch (err) {
@@ -3500,13 +3524,17 @@
         setLockDate(isoDate);
 
         try {
-          await fetch(SHEETS_URL, {
+          const res = await fetch(SHEETS_URL, {
             method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain" },
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ action: "set_lock_date", lockDate: isoDate })
           });
-          toast(`Đã khóa sổ sách từ ngày ${formatLockDateVN(isoDate)} trở về trước và đồng bộ lên hệ thống.`, "success");
+          const data = await res.json();
+          if (data && data.status === "error") {
+            toast(data.message || "Lỗi khi lưu ngày khóa lên server.", "error");
+            return;
+          }
+          toast(data.message || `Đã khóa sổ sách từ ngày ${formatLockDateVN(isoDate)} trở về trước và đồng bộ lên hệ thống.`, "success");
         } catch (err) {
           toast(`Đã khóa cục bộ nhưng chưa đồng bộ được lên server: ${err.message}`, "warning");
         } finally {
@@ -3535,13 +3563,17 @@
         setLockDate("");
 
         try {
-          await fetch(SHEETS_URL, {
+          const res = await fetch(SHEETS_URL, {
             method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain" },
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ action: "set_lock_date", lockDate: "" })
           });
-          toast("Đã mở khóa ngày sổ sách trên toàn hệ thống.", "info");
+          const data = await res.json();
+          if (data && data.status === "error") {
+            toast(data.message || "Lỗi khi mở khóa trên server.", "error");
+            return;
+          }
+          toast(data.message || "Đã mở khóa ngày sổ sách trên toàn hệ thống.", "info");
         } catch (err) {
           toast(`Đã mở khóa cục bộ nhưng chưa đồng bộ được: ${err.message}`, "warning");
         } finally {
