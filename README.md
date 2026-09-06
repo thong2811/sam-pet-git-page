@@ -83,11 +83,12 @@ Trong kinh doanh Pet Shop, cửa hàng thường xuyên nhập các sản phẩm
 
 | Thành phần | Công nghệ / Thư viện | Mô tả |
 | :--- | :--- | :--- |
-| **Giao diện & Logic** | HTML5, Vanilla JavaScript (ES6+) | Toàn bộ logic SPA chạy trên client, không cần backend Node.js phức tạp |
-| **Styling** | Tailwind CSS (CDN) + Custom CSS | Giao diện tông màu ngọc bích / đất sét (Pine / Clay), hiệu ứng đổ bóng `shadow-card`, bo góc mượt mà |
-| **Offline & PWA** | Service Worker (`sw.js`), Web App Manifest | Caching cache-first cho file tĩnh và network-first/bypass cho API Sheets |
+| **Bundler & Dev Server** | Vite 6 | Khởi động tức thì, Hot Module Replacement (HMR), tối ưu bundle |
+| **Giao diện & Logic** | HTML5, Vanilla ES Modules | Tách biệt theo từng View và Service chuyên biệt (`src/views/`, `src/services/`) |
+| **Styling** | Tailwind CSS v3 + PostCSS | Đóng gói tối ưu chỉ **26.7 KB** CSS thực tế (loại bỏ CDN 3MB) |
+| **Offline & PWA** | Service Worker (`public/sw.js`), Web App Manifest | Caching offline, Pull-to-refresh mượt mà |
 | **Lưu trữ từ xa** | Google Apps Script + Google Sheets | Cơ sở dữ liệu đám mây không tốn chi phí server |
-| **Dữ liệu danh mục** | CSV Parser thuần (Pure JS) | Đọc và xử lý file CSV tuân theo chuẩn RFC-4180 |
+| **CI / CD** | GitHub Actions (`.github/workflows/deploy.yml`) | Tự động build và deploy lên GitHub Pages khi push git |
 
 ---
 
@@ -95,29 +96,47 @@ Trong kinh doanh Pet Shop, cửa hàng thường xuyên nhập các sản phẩm
 
 ```text
 sam-pet-git-page/
-├── backend/                    # Mã nguồn & cấu hình Google Apps Script (Backend)
-│   ├── Code.gs                 # Script xử lý ghi Google Sheets & Khóa ngày sổ sách
-│   ├── appsscript.json         # Manifest khai báo quyền Web App
-│   └── .claspignore            # Quy tắc loại trừ khi đẩy code lên Apps Script
-├── docs/                       # Tài liệu kỹ thuật & đặc tả API
-│   └── DOCS_REPACKAGE_SYNC.md  # Tài liệu kỹ thuật đồng bộ Chiết hàng
-├── icons/                      # Icon ứng dụng PWA
-│   ├── apple-touch-icon.png    # Icon cho iOS Safari
-│   ├── icon-192.png            # Icon PWA 192x192
-│   ├── icon-512.png            # Icon PWA 512x512
-│   └── icon.svg                # Icon vector
-├── scripts/                    # Scripts tự động hóa
-│   └── deploy.js               # Script Node.js tự động deploy Clasp & giữ nguyên URL
-├── .clasp.json                 # Cấu hình liên kết Google Clasp
-├── .gitignore                  # Cấu hình bỏ qua tệp của Git
-├── env.example.js              # Tệp mẫu cấu hình môi trường
-├── env.js                      # Cấu hình môi trường thực tế (SHEETS_URL, PIN, Version)
-├── index.html                  # Giao diện & toàn bộ mã nguồn xử lý ứng dụng (Xuất & Chiết hàng)
-├── manifest.json               # Cấu hình PWA (theme, tên app, icon, start_url)
-├── package.json                # Quản lý script NPM & Clasp
-├── products.csv                # Dữ liệu danh mục sản phẩm (id, name, unit, sellingPrice, initStock, ...)
-├── README.md                   # Tài liệu hướng dẫn sử dụng và phát triển
-└── sw.js                       # Service Worker quản lý cache & offline
+├── .github/
+│   └── workflows/
+│       └── deploy.yml              # Tự động build và deploy lên GitHub Pages khi push git
+├── backend/                        # Mã nguồn & cấu hình Google Apps Script (Backend)
+│   ├── Code.gs                     # Script xử lý ghi Google Sheets & Khóa ngày sổ sách
+│   ├── appsscript.json             # Manifest khai báo quyền Web App
+│   └── .claspignore                # Quy tắc loại trừ khi đẩy code lên Apps Script
+├── docs/                           # Tài liệu kỹ thuật & đặc tả API
+│   └── DOCS_REPACKAGE_SYNC.md      # Tài liệu kỹ thuật đồng bộ Chiết hàng
+├── public/                         # Chứa tài nguyên tĩnh nguyên bản
+│   ├── env.js                      # Cấu hình môi trường (SHEETS_URL, PIN, Version)
+│   ├── favicon.ico                 # Biểu tượng tab trình duyệt
+│   ├── manifest.json               # Cấu hình PWA
+│   ├── products.csv                # Dữ liệu danh mục sản phẩm mẫu
+│   ├── sw.js                       # Service Worker quản lý cache & offline
+│   └── icons/                      # Bộ icon ứng dụng PWA
+├── src/                            # Mã nguồn ứng dụng module hóa
+│   ├── config.js                   # Trích xuất config an toàn từ window.ENV
+│   ├── style.css                   # Tailwind CSS và custom styles
+│   ├── main.js                     # Điều phối Router tabs, Pull-to-refresh, nạp dữ liệu
+│   ├── services/
+│   │   └── api.js                  # Toàn bộ hàm gọi Google Apps Script API & nạp CSV
+│   ├── state/
+│   │   └── app-state.js            # Quản lý State tập trung sạch sẽ
+│   ├── utils/
+│   │   ├── dom.js                  # $, $$, on, debounce
+│   │   ├── formatters.js           # Format tiền, ngày tháng, chuẩn hóa ngày VN, parse CSV
+│   │   └── toast.js                # Thông báo nổi (Toast)
+│   └── views/
+│       ├── xuat-hang/              # Các view và modal của chức năng Xuất Hàng
+│       ├── chiet-hang/             # Các view và modal của chức năng Chiết Hàng
+│       └── common/                 # Các modal dùng chung (Khóa ngày, sửa dòng)
+├── scripts/
+│   └── deploy.js                   # Script tự động deploy Clasp & giữ nguyên URL
+├── .clasp.json                     # Cấu hình liên kết Google Clasp
+├── .gitignore                      # Cấu hình bỏ qua tệp của Git (bỏ qua dist/, node_modules/)
+├── env.example.js                  # Tệp mẫu cấu hình môi trường
+├── index.html                      # Khung HTML thanh thoát
+├── package.json                    # Quản lý script NPM (dev, build, preview, deploy)
+├── tailwind.config.js              # Cấu hình theme màu sắc SamPet
+└── vite.config.js                  # Cấu hình Vite build
 ```
 
 ---

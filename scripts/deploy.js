@@ -25,7 +25,9 @@ if (!claspConfig.scriptId || claspConfig.scriptId.includes("PASTE_YOUR_SCRIPT_ID
 
 // 2. Lấy Deployment ID từ env.js để giữ nguyên Web App URL
 let deploymentId = "";
-const envJsPath = path.join(PROJECT_ROOT, "env.js");
+const envJsPath = fs.existsSync(path.join(PROJECT_ROOT, "public", "env.js"))
+  ? path.join(PROJECT_ROOT, "public", "env.js")
+  : path.join(PROJECT_ROOT, "env.js");
 if (fs.existsSync(envJsPath)) {
   const envContent = fs.readFileSync(envJsPath, "utf-8");
   const match = envContent.match(/\/macros\/s\/([a-zA-Z0-9_-]+)\/exec/);
