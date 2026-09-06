@@ -56,8 +56,8 @@ async function handleSelfChangePinSubmit() {
     return;
   }
 
-  if (newPin.length < 4 || newPin.length > 8) {
-    toast("Mã PIN mới phải từ 4 đến 8 chữ số!", "error");
+  if (newPin.length !== 6 || !/^\d{6}$/.test(newPin)) {
+    toast("Mã PIN mới phải bao gồm đúng 6 chữ số!", "error");
     $("self-change-pin-new")?.focus();
     return;
   }
@@ -271,8 +271,8 @@ async function handleStaffFormSubmit() {
     return;
   }
 
-  if (pin.length < 4 || pin.length > 8) {
-    toast("Mã PIN phải từ 4 đến 8 chữ số!", "error");
+  if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    toast("Mã PIN phải bao gồm đúng 6 chữ số!", "error");
     $("add-staff-pin")?.focus();
     return;
   }

@@ -11,7 +11,7 @@ import { CONFIG } from "./config.js";
 import { isAuthenticated, authenticateUserPin, authenticatePin, clearSession, syncStaffList } from "./utils/auth.js";
 
 // Common modals
-import { initLockDateModal, fetchLockDate } from "./views/common/lock-date-modal.js";
+import { initLockDateModal, fetchLockDate, updateLockDateUI } from "./views/common/lock-date-modal.js";
 import { initEditRowModal } from "./views/common/edit-row-modal.js";
 import { initStaffModals, openStaffManageModal, openSelfChangePinModal } from "./views/common/staff-manage-modal.js";
 
@@ -412,33 +412,25 @@ document.addEventListener("DOMContentLoaded", () => {
       sidebarAvatar.textContent = isRoot ? "👑" : (user.name ? user.name.charAt(0).toUpperCase() : "👤");
     }
 
-    // Nút Quản lý nhân viên chỉ hiển thị đối với Root
+    // 1. Nút Đổi mã PIN: chỉ áp dụng cho nhân viên (ẩn với Root)
+    const sidebarBtnChangePin = $("sidebar-btn-change-pin");
+    if (sidebarBtnChangePin) {
+      sidebarBtnChangePin.classList.toggle("hidden", isRoot);
+    }
+
+    // 2. Nút Quản lý nhân viên: chỉ hiển thị đối với Root
     if (sidebarBtnManage) {
       sidebarBtnManage.classList.toggle("hidden", !isRoot);
     }
 
-    // Cập nhật nhãn và trạng thái nút Khóa ngày theo vai trò
-    const sidebarLockTitle = $("sidebar-lock-title");
-    const sidebarLockBadge = $("sidebar-lock-badge");
-    const btnOpenLockDate = $("btn-open-lock-date-modal");
+    // 3. Tab Khóa ngày sổ sách: chỉ hiển thị cho Root (nhân viên không cần tab này)
+    const sidebarBtnLockDate = $("sidebar-btn-lock-date");
+    if (sidebarBtnLockDate) {
+      sidebarBtnLockDate.classList.toggle("hidden", !isRoot);
+    }
 
-    if (sidebarLockTitle) {
-      sidebarLockTitle.textContent = isRoot ? "Khóa Ngày Sổ Sách" : "Xem Ngày Khóa Sổ";
-    }
-    if (sidebarLockBadge) {
-      if (isRoot) {
-        sidebarLockBadge.textContent = "Root 🔒";
-        sidebarLockBadge.className = "text-[10px] text-amber-300 font-mono";
-      } else {
-        sidebarLockBadge.textContent = "Chỉ xem 🔒";
-        sidebarLockBadge.className = "text-[10px] text-white/50 font-mono";
-      }
-    }
-    if (btnOpenLockDate) {
-      btnOpenLockDate.title = isRoot
-        ? "Cài đặt khóa ngày sổ sách (Quyền Root)"
-        : "Xem thông tin ngày khóa sổ sách";
-    }
+    // 4. Cập nhật trạng thái ngày khóa trên header
+    updateLockDateUI();
   }
 
   let isAuthenticating = false;
@@ -451,10 +443,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (!currentPinInput || currentPinInput.length < 4) {
+    if (!currentPinInput || currentPinInput.length !== 6) {
       const errorEl = $("auth-pin-error");
       if (errorEl) {
-        $("auth-pin-error-text").textContent = "Vui lòng nhập ít nhất 4 chữ số.";
+        $("auth-pin-error-text").textContent = "Vui lòng nhập đủ 6 chữ số.";
         errorEl.classList.remove("hidden");
       }
       return;
@@ -518,13 +510,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (/^[0-9]$/.test(key)) {
-      if (currentPinInput.length < 8) {
+      if (currentPinInput.length < 6) {
         currentPinInput += key;
         updatePinDots();
       }
 
-      // Tự động kiểm tra nếu là Root 6 số hoặc đạt 6 số
-      if (currentPinInput.length === 6 && selectedUserForAuth && selectedUserForAuth.role === "root") {
+      // Tự động submit ngay khi nhập đủ 6 chữ số (cho cả Root và Nhân viên)
+      if (currentPinInput.length === 6) {
         trySubmitPin();
       }
     }
@@ -600,7 +592,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("btn-open-lock-date-modal")?.click();
   });
   $("sidebar-btn-logout")?.addEventListener("click", () => {
-    if (confirm("Bạn có chắc chắn muốn đăng xuất hoặc đổi tài khoản khác?")) {
+    if (confirm("Bạn có chắc chắn muốn đăng xuất?")) {
       clearSession();
       closeSidebar();
       showAuthScreen();

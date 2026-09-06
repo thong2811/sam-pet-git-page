@@ -211,8 +211,8 @@ export async function selfChangePin(oldPin, newPin) {
     return { success: false, message: "Vui lòng nhập đầy đủ mã PIN hiện tại và mã PIN mới." };
   }
 
-  if (cleanNew.length < 4 || cleanNew.length > 8) {
-    return { success: false, message: "Mã PIN mới phải từ 4 đến 8 chữ số." };
+  if (cleanNew.length !== 6 || !/^\d{6}$/.test(cleanNew)) {
+    return { success: false, message: "Mã PIN mới phải bao gồm đúng 6 chữ số." };
   }
 
   if (cleanOld === cleanNew) {
@@ -271,8 +271,8 @@ export async function rootAddStaff({ name, pin, role = "staff" }) {
     throw new Error("Vui lòng điền đầy đủ Tên nhân viên và Mã PIN.");
   }
 
-  if (cleanPin.length < 4 || cleanPin.length > 8) {
-    throw new Error("Mã PIN phải từ 4 đến 8 chữ số.");
+  if (cleanPin.length !== 6 || !/^\d{6}$/.test(cleanPin)) {
+    throw new Error("Mã PIN phải bao gồm đúng 6 chữ số.");
   }
 
   // Kiểm tra trùng với ROOT_PIN
@@ -321,8 +321,12 @@ export async function rootUpdateStaff(staffId, { name, pin }) {
   const cleanName = name !== undefined ? String(name).trim() : list[idx].name;
   const cleanPin = pin !== undefined ? String(pin).trim() : list[idx].pin;
 
-  if (!cleanName || !cleanPin) {
-    throw new Error("Tên và PIN không được để trống.");
+  if (!cleanName) {
+    throw new Error("Tên nhân viên không được để trống.");
+  }
+
+  if (cleanPin.length !== 6 || !/^\d{6}$/.test(cleanPin)) {
+    throw new Error("Mã PIN phải bao gồm đúng 6 chữ số.");
   }
 
   if (cleanPin === String(CONFIG.ROOT_PIN).trim()) {

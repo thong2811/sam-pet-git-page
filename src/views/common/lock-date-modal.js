@@ -37,6 +37,7 @@ export function setLockDateLoading(isLoading) {
 }
 
 export function updateLockDateUI() {
+  const isRoot = isRootUser();
   const lock = getLockDate();
   const textEl = $("lock-date-header-text");
   const descEl = $("lock-date-status-desc");
@@ -63,6 +64,18 @@ export function updateLockDateUI() {
     const sideLock = $("sidebar-lock-status");
     if (sideLock) sideLock.textContent = "Chưa đặt";
   }
+
+  if (btnOpen) {
+    if (isRoot) {
+      btnOpen.classList.add("cursor-pointer", "hover:bg-white/20");
+      btnOpen.classList.remove("cursor-default", "hover:bg-white/10");
+      btnOpen.title = "Cài đặt khóa ngày sổ sách (Quyền Root)";
+    } else {
+      btnOpen.classList.remove("cursor-pointer", "hover:bg-white/20");
+      btnOpen.classList.add("cursor-default", "hover:bg-white/10");
+      btnOpen.title = lock ? `Đang khóa sổ sách đến ngày ${formatLockDateVN(lock)}` : "Chưa đặt ngày khóa sổ";
+    }
+  }
 }
 
 export async function fetchLockDate() {
@@ -80,6 +93,7 @@ export async function fetchLockDate() {
 }
 
 export async function openLockDateModal() {
+  if (!isRootUser()) return; // Chỉ Root mới mở popup cài đặt khóa ngày, nhân viên chỉ xem trên header
   const isRoot = isRootUser();
   const lock = getLockDate();
 
