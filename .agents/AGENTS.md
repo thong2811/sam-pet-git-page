@@ -49,8 +49,12 @@ Các quy tắc chi tiết được module hóa tại thư mục [`.agents/rules/
 
 ---
 
-## 5. Kỹ Năng Tự Động Hóa (.agents/skills/)
+## 5. Kỹ Năng Tự Động Hóa Vibe Coding (.agents/skills/)
 
 Các kỹ năng tác vụ nhiều bước được nạp theo nhu cầu (Progressive Disclosure):
+- **[ship-feature](file:///.agents/skills/ship-feature/SKILL.md)**: Tự động hóa phát triển tính năng mới trọn gói từ A-Z (View + State + Route + Auto Build).
+- **[fix-and-heal](file:///.agents/skills/fix-and-heal/SKILL.md)**: Tự động chẩn đoán lỗi console/build, sửa tận gốc & tái kiểm tra.
+- **[ui-vibe-polish](file:///.agents/skills/ui-vibe-polish/SKILL.md)**: Gọt giũa UX/UI mobile touch target, theme SamPet, toast & animations.
+- **[safe-checkpoint](file:///.agents/skills/safe-checkpoint/SKILL.md)**: Tạo phao cứu sinh (Git tag + backup data) cho phép rollback tức thì ("quay lại bản cũ").
 - **[deploy-backend](file:///.agents/skills/deploy-backend/SKILL.md)**: Quy trình deploy Google Apps Script backend bằng Clasp và cập nhật `public/env.js`.
 - **[pwa-release](file:///.agents/skills/pwa-release/SKILL.md)**: Quy trình cập nhật `APP_VERSION`, Service Worker cache và release PWA.

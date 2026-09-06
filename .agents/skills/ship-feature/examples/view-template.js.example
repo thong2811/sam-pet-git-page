@@ -1,0 +1,101 @@
+// ============================================================
+// Khuôn mẫu View Chuẩn Kiến Trúc SamPet (View Boilerplate Example)
+// File name: src/views/<feature>/<name>-view.js
+// ============================================================
+import { $, $$ } from "../../utils/dom.js";
+import { toast } from "../../utils/toast.js";
+import { escapeHtml, formatNgayXuat, formatTien } from "../../utils/formatters.js";
+import { state, isDateLocked } from "../../state/app-state.js";
+
+/**
+ * Khởi tạo toàn bộ sự kiện và dữ liệu ban đầu cho View
+ */
+export function initFeatureView() {
+  const container = $("feature-container");
+  if (!container) return;
+
+  // Lắng nghe sự kiện delegated cho các nút bấm hành động
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    switch (action) {
+      case "refresh":
+        renderFeature();
+        break;
+      case "save":
+        handleSave();
+        break;
+      case "delete":
+        handleDelete(id);
+        break;
+    }
+  });
+
+  // Render lần đầu
+  renderFeature();
+}
+
+/**
+ * Render dữ liệu ra giao diện HTML
+ */
+export function renderFeature() {
+  const listEl = $("feature-list");
+  if (!listEl) return;
+
+  const items = state.myFeature?.items || [];
+  if (!items.length) {
+    listEl.innerHTML = `<div class="p-6 text-center text-sm text-slate-400">Chưa có dữ liệu nào.</div>`;
+    return;
+  }
+
+  // BẮT BUỘC: Dùng escapeHtml() cho mọi dữ liệu động đưa vào innerHTML
+  listEl.innerHTML = items.map((item) => `
+    <div class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm">
+      <div>
+        <div class="font-semibold text-slate-800">${escapeHtml(item.name)}</div>
+        <div class="text-xs text-slate-500">${escapeHtml(formatNgayXuat(item.date))} • ${escapeHtml(formatTien(item.amount))}</div>
+      </div>
+      <button type="button" data-action="delete" data-id="${escapeHtml(item.id)}"
+        class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors active:scale-95">
+        Xóa
+      </button>
+    </div>
+  `).join("");
+}
+
+/**
+ * Xử lý hành động lưu - Có kiểm tra Khóa Ngày Sổ Sách
+ */
+function handleSave() {
+  const targetDate = $("feature-date")?.value || "";
+  
+  // BẮT BUỘC: Kiểm tra khóa ngày trước khi ghi dữ liệu
+  if (isDateLocked(targetDate)) {
+    toast(`Ngày ${targetDate} đã bị khóa sổ sách kế toán. Không thể thao tác!`, "error");
+    return;
+  }
+
+  try {
+    // Thực hiện logic lưu...
+    toast("Đã lưu thành công!", "success");
+    renderFeature();
+  } catch (err) {
+    console.error("Lỗi khi lưu:", err);
+    toast("Lỗi hệ thống khi lưu: " + err.message, "error");
+  }
+}
+
+/**
+ * Xử lý xóa dòng
+ */
+function handleDelete(id) {
+  if (!confirm("Bạn có chắc chắn muốn xóa không?")) return;
+  // Xóa khỏi state và render lại
+  state.myFeature.items = state.myFeature.items.filter(i => i.id !== id);
+  toast("Đã xóa thành công.", "info");
+  renderFeature();
+}
