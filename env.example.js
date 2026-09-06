@@ -6,9 +6,10 @@ const root = typeof self !== "undefined" ? self : (typeof window !== "undefined"
 
 root.ENV = {
   SHEETS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
-  STAFF_PIN: "110899",
-  LOCK_DATE_PIN: "110899",
+  ROOT_PIN: "032023",
   SHEET_NAME_PHIEUXUAT: "PhieuXuat",
+  SHEET_NAME_REPACKAGE: "repackage",
+  SHEET_NAME_STAFF: "NhanVien",
   APP_VERSION: "1.0.0",
   STORE_NAME: "Sam Pet - Dịch Vụ Thú Cưng",
   ADDRESS: "số 105, Phan Văn Năm, Phường Cái Vồn, Tỉnh Vĩnh Long",

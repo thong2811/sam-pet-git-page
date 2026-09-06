@@ -4,8 +4,7 @@
 import { $ } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
 import { formatLockDateVN, toYMD, formatNgayXuat, pad } from "../../utils/formatters.js";
-import { state, getLockDate, setLockDate } from "../../state/app-state.js";
-import { CONFIG } from "../../config.js";
+import { state, getLockDate, setLockDate, isRootUser } from "../../state/app-state.js";
 import { fetchLockDateAPI, setLockDateAPI } from "../../services/api.js";
 
 export function getMinAllowedDate() {
@@ -81,17 +80,52 @@ export async function fetchLockDate() {
 }
 
 export async function openLockDateModal() {
+  const isRoot = isRootUser();
   const lock = getLockDate();
-  if ($("lock-date-input")) $("lock-date-input").value = lock ? toYMD(lock) : "";
-  if ($("lock-date-pin")) $("lock-date-pin").value = "";
+
+  const inputEl = $("lock-date-input");
+  const actionsEl = $("lock-date-action-buttons");
+  const staffNoticeEl = $("lock-date-staff-notice");
+  const roleBadgeEl = $("lock-date-role-badge");
+  const titleEl = $("lock-date-modal-title");
+
+  if (inputEl) {
+    inputEl.value = lock ? toYMD(lock) : "";
+    inputEl.disabled = !isRoot;
+    if (isRoot) {
+      inputEl.classList.remove("bg-slate-100", "cursor-not-allowed", "text-slate-500");
+      inputEl.classList.add("bg-paper/40", "cursor-pointer", "text-ink");
+    } else {
+      inputEl.classList.add("bg-slate-100", "cursor-not-allowed", "text-slate-500");
+      inputEl.classList.remove("bg-paper/40", "cursor-pointer", "text-ink");
+    }
+  }
+
+  if (actionsEl) {
+    actionsEl.classList.toggle("hidden", !isRoot);
+  }
+  if (staffNoticeEl) {
+    staffNoticeEl.classList.toggle("hidden", isRoot);
+  }
+  if (roleBadgeEl) {
+    if (isRoot) {
+      roleBadgeEl.textContent = "👑 Root";
+      roleBadgeEl.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300/60";
+    } else {
+      roleBadgeEl.textContent = "👤 Nhân viên (Chỉ xem)";
+      roleBadgeEl.className = "text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200";
+    }
+  }
+  if (titleEl) {
+    titleEl.textContent = isRoot ? "Khóa Ngày Sổ Sách" : "Thông Tin Khóa Ngày";
+  }
+
   updateLockDateUI();
   if ($("lock-date-modal")) $("lock-date-modal").classList.remove("hidden");
-  if ($("lock-date-pin")) $("lock-date-pin").focus();
   await fetchLockDate();
 }
 
 export function closeLockDateModal() {
-  if ($("lock-date-pin")) $("lock-date-pin").value = "";
   if ($("lock-date-modal")) $("lock-date-modal").classList.add("hidden");
 }
 
@@ -106,6 +140,11 @@ export function initLockDateModal() {
     btnClose.addEventListener("click", closeLockDateModal);
   }
 
+  const btnCancel = $("btn-lock-date-cancel");
+  if (btnCancel) {
+    btnCancel.addEventListener("click", closeLockDateModal);
+  }
+
   const modalEl = $("lock-date-modal");
   if (modalEl) {
     modalEl.addEventListener("click", (e) => {
@@ -116,20 +155,14 @@ export function initLockDateModal() {
   const btnSave = $("btn-lock-date-save");
   if (btnSave) {
     btnSave.addEventListener("click", async () => {
-      const isoDate = ($("lock-date-input").value || "").trim();
-      const pin = ($("lock-date-pin").value || "").trim();
-
-      if (!isoDate) {
-        toast("Vui lòng chọn ngày mốc khóa sổ!", "error");
+      if (!isRootUser()) {
+        toast("Chỉ Quản trị viên (Root) mới có quyền Khóa ngày sổ sách!", "error");
         return;
       }
 
-      if (pin !== CONFIG.LOCK_DATE_PIN) {
-        toast("Mã PIN không chính xác. Vui lòng thử lại!", "error");
-        if ($("lock-date-pin")) {
-          $("lock-date-pin").value = "";
-          $("lock-date-pin").focus();
-        }
+      const isoDate = ($("lock-date-input")?.value || "").trim();
+      if (!isoDate) {
+        toast("Vui lòng chọn ngày mốc khóa sổ!", "error");
         return;
       }
 
@@ -158,14 +191,8 @@ export function initLockDateModal() {
   const btnClear = $("btn-lock-date-clear");
   if (btnClear) {
     btnClear.addEventListener("click", async () => {
-      const pin = ($("lock-date-pin").value || "").trim();
-
-      if (pin !== CONFIG.LOCK_DATE_PIN) {
-        toast("Mã PIN không chính xác. Vui lòng thử lại!", "error");
-        if ($("lock-date-pin")) {
-          $("lock-date-pin").value = "";
-          $("lock-date-pin").focus();
-        }
+      if (!isRootUser()) {
+        toast("Chỉ Quản trị viên (Root) mới có quyền Mở khóa ngày sổ sách!", "error");
         return;
       }
 

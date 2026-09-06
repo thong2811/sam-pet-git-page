@@ -75,10 +75,14 @@ export function getRepackageSessions() {
         fromQuantity: Number(r.sessionFromQty || r.fromQuantity || 0),
         sessionFromQty: Number(r.sessionFromQty || 0),
         createdAt: r.createdAt,
+        staff: r.staff || "",
         items: []
       });
     }
     const session = map.get(key);
+    if (!session.staff && r.staff) {
+      session.staff = r.staff;
+    }
     const itemSessionQty = Number(r.sessionFromQty || 0);
     const itemFromQty = Number(r.fromQuantity || 0);
     if (itemSessionQty > 0) {
@@ -148,6 +152,7 @@ export function renderRepackageHistory() {
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="inline-flex items-center font-bold text-red-600 bg-red-50 border border-red-200/60 px-2 py-0.5 rounded-md text-xs">-${session.fromQuantity}</span>
             <span class="font-semibold text-pine-900 text-xs">${escapeHtml(session.fromProductName || session.fromProductId)}</span>
+            ${session.staff ? `<span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded font-medium bg-slate-100 text-slate-600 shrink-0">👤 ${escapeHtml(session.staff)}</span>` : ""}
           </div>
         </td>
         <td class="px-4 py-3 align-top">
@@ -182,7 +187,7 @@ export function renderRepackageHistory() {
           <label class="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
             <input type="checkbox" data-action="repackcheck" value="${escapeHtml(session.sessionId)}" ${checked} class="rounded shrink-0 text-pine-600 focus:ring-pine-500" />
             <div class="min-w-0">
-              <span class="text-xs text-slate-400 font-medium">${escapeHtml(session.date || "")}</span>
+              <span class="text-xs text-slate-400 font-medium">${escapeHtml(session.date || "")} ${session.staff ? `· <span class="text-slate-600 font-semibold">👤 ${escapeHtml(session.staff)}</span>` : ""}</span>
               <p class="font-semibold text-sm text-pine-900 truncate">
                 ${escapeHtml(session.fromProductName || session.fromProductId)} &rarr; ${session.items.length} mặt hàng đích
               </p>

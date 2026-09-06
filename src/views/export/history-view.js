@@ -13,7 +13,7 @@ import { updateLockDateUI } from "../common/lock-date-modal.js";
 const EXPORT_HEADER = [
   "id", "date", "productId", "productName",
   "quantity", "sellingPrice", "purchasePrice",
-  "note", "createdAt", "updatedAt"
+  "note", "staff", "createdAt", "updatedAt"
 ];
 
 export async function loadSheetHistory() {
@@ -126,7 +126,10 @@ export function renderHistory() {
           <td class="px-4 py-2.5 text-slate-400 text-xs">${idx + 1}</td>
           <td class="px-4 py-2.5 whitespace-nowrap text-slate-600">${escapeHtml(row.date || "")}</td>
           <td class="px-4 py-2.5 whitespace-nowrap font-mono text-xs">${escapeHtml(row.productId || "")}</td>
-          <td class="px-4 py-2.5 font-medium">${escapeHtml(row.productName || "")}</td>
+          <td class="px-4 py-2.5 font-medium">
+            <div>${escapeHtml(row.productName || "")}</div>
+            ${row.staff ? `<span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded font-medium bg-slate-100 text-slate-600 mt-0.5">👤 ${escapeHtml(row.staff)}</span>` : ""}
+          </td>
           <td class="px-4 py-2.5 text-right font-medium">${escapeHtml(String(row.quantity || ""))}</td>
           <td class="px-4 py-2.5 text-right whitespace-nowrap">${row.sellingPrice ? Number(row.sellingPrice).toLocaleString("vi-VN") : "—"}</td>
           <td class="px-4 py-2.5 text-right font-semibold text-pine-700 whitespace-nowrap">${rowTotal ? rowTotal.toLocaleString("vi-VN") + " đ" : "—"}</td>
@@ -154,7 +157,7 @@ export function renderHistory() {
               <input type="checkbox" data-action="rowcheck" value="${escapeHtml(row.id)}" ${checked} class="rounded mt-0.5" />
               <div>
                 <p class="font-medium text-sm">${escapeHtml(row.productName || "")}</p>
-                <p class="text-xs text-slate-500">${escapeHtml(row.productId || "")} · ${escapeHtml(row.date || "")}</p>
+                <p class="text-xs text-slate-500">${escapeHtml(row.productId || "")} · ${escapeHtml(row.date || "")} ${row.staff ? `· <span class="font-medium text-slate-700">👤 ${escapeHtml(row.staff)}</span>` : ""}</p>
               </div>
             </div>
             <button type="button" data-action="edit" data-id="${escapeHtml(row.id)}"

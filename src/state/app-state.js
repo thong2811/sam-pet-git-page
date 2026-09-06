@@ -27,8 +27,30 @@ export const state = {
     sourceId: "",
     sourceQty: 1,
     targets: []
-  }
+  },
+  currentUser: null,
+  staffList: []
 };
+
+export function getCurrentUser() {
+  return state.currentUser || null;
+}
+
+export function setCurrentUser(user) {
+  state.currentUser = user;
+}
+
+export function isRootUser() {
+  return Boolean(state.currentUser && state.currentUser.role === "root");
+}
+
+export function getStaffList() {
+  return state.staffList || [];
+}
+
+export function setStaffList(list) {
+  state.staffList = Array.isArray(list) ? list : [];
+}
 
 export function genLineId() {
   let id = "";

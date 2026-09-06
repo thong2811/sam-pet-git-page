@@ -9,17 +9,23 @@ export const CONFIG = {
   get SHEETS_URL() {
     return getEnv().SHEETS_URL || "https://script.google.com/macros/s/AKfycbyE6Sms6dOVaqowarrIx8Jdj53PcvZzqua4bafuiXhu2W9eWrQW57Tmw1d7lsAneo4/exec";
   },
+  get ROOT_PIN() {
+    return String(getEnv().ROOT_PIN || getEnv().LOCK_DATE_PIN || getEnv().STAFF_PIN || "032023").trim();
+  },
   get STAFF_PIN() {
-    return getEnv().STAFF_PIN || getEnv().LOCK_DATE_PIN || "110899";
+    return this.ROOT_PIN;
   },
   get LOCK_DATE_PIN() {
-    return getEnv().LOCK_DATE_PIN || "110899";
+    return this.ROOT_PIN;
   },
   get SHEET_NAME_PHIEUXUAT() {
     return getEnv().SHEET_NAME_PHIEUXUAT || "PhieuXuat";
   },
   get SHEET_NAME_REPACKAGE() {
     return getEnv().SHEET_NAME_REPACKAGE || "repackage";
+  },
+  get SHEET_NAME_STAFF() {
+    return getEnv().SHEET_NAME_STAFF || "NhanVien";
   },
   get APP_VERSION() {
     return getEnv().APP_VERSION || "2.0.0";

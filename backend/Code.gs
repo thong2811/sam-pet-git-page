@@ -22,12 +22,13 @@
 
 var SHEET_NAME_PHIEUXUAT = "PhieuXuat";
 var SHEET_NAME_REPACKAGE = "repackage";
+var SHEET_NAME_STAFF = "NhanVien";
 var LOCK_TIMEOUT_MS = 10000; // chờ lock tối đa 10 giây
 
 var HEADER_PHIEUXUAT = [
   "id", "date", "productId", "productName",
   "quantity", "sellingPrice", "purchasePrice",
-  "note", "createdAt", "updatedAt"
+  "note", "staff", "createdAt", "updatedAt"
 ];
 
 var HEADER_REPACKAGE = [
@@ -35,7 +36,11 @@ var HEADER_REPACKAGE = [
   "fromProductId", "fromProductName",
   "toProductId", "toProductName",
   "fromQuantity", "sessionFromQty", "toQuantity",
-  "note", "createdAt", "updatedAt"
+  "note", "staff", "createdAt", "updatedAt"
+];
+
+var HEADER_STAFF = [
+  "id", "name", "pin", "role", "createdAt", "updatedAt", "status"
 ];
 
 // ── doGet ────────────────────────────────────────────────────
@@ -47,6 +52,41 @@ function doGet(e) {
     // Trả về riêng ngày khóa
     if (type === "get_lock_date") {
       return jsonResponse({ status: "ok", lockDate: lockDate });
+    }
+
+    // 0. Trả về danh sách NHÂN VIÊN
+    if (type === "staff") {
+      var ssStaff = SpreadsheetApp.getActiveSpreadsheet();
+      var sheetStaff = ssStaff.getSheetByName(SHEET_NAME_STAFF);
+      if (!sheetStaff || sheetStaff.getLastRow() <= 1) {
+        return jsonResponse({ status: "ok", staffList: [] });
+      }
+
+      var lastRowS = sheetStaff.getLastRow();
+      var lastColS = sheetStaff.getLastColumn();
+      var headerRowS = sheetStaff.getRange(1, 1, 1, lastColS).getValues()[0].map(function(h) { return String(h).trim(); });
+      var dataS = sheetStaff.getRange(2, 1, lastRowS - 1, lastColS).getValues();
+
+      var staffList = dataS.map(function(row) {
+        var obj = {};
+        headerRowS.forEach(function(key, i) {
+          if (!key) return;
+          var val = row[i];
+          if (key === "pin" || key === "id") {
+            val = String(val).replace(/^'+/, "").trim();
+          } else if (key === "createdAt" || key === "updatedAt") {
+            val = val !== "" && !isNaN(val) ? Number(val) : val;
+          } else {
+            val = val !== undefined ? String(val).trim() : "";
+          }
+          obj[key] = val;
+        });
+        return obj;
+      }).filter(function(st) {
+        return st.id && (st.status !== "inactive" && st.status !== "deleted");
+      });
+
+      return jsonResponse({ status: "ok", staffList: staffList });
     }
 
     // 1. Trả về dữ liệu tab CHIẾT HÀNG
@@ -132,6 +172,14 @@ function doPost(e) {
 
     // Router Khóa Ngày Sổ Sách (Lưu vào tab CaiDat và ScriptProperties)
     if (action === "set_lock_date") {
+      var role = String(payload.role || "").trim();
+      if (role && role !== "root") {
+        return jsonResponse({
+          status: "error",
+          message: "Từ chối thao tác: Chỉ Quản trị viên (Root) mới có quyền Khóa/Mở khóa ngày sổ sách."
+        });
+      }
+
       var lock = LockService.getScriptLock();
       try {
         lock.waitLock(LOCK_TIMEOUT_MS);
@@ -140,12 +188,17 @@ function doPost(e) {
       }
       try {
         var newLockDate = String(payload.lockDate || "").trim();
-        setGlobalLockDate(newLockDate);
-        return jsonResponse({ status: "ok", message: "Đã cập nhật ngày khóa sổ thành công.", lockDate: newLockDate });
+        var lockedBy = String(payload.staff || payload.lockedBy || "Root").trim();
+        setGlobalLockDate(newLockDate, lockedBy);
+        return jsonResponse({ status: "ok", message: "Đã cập nhật ngày khóa sổ thành công.", lockDate: newLockDate, lockedBy: lockedBy });
       } finally {
         lock.releaseLock();
       }
     }
+
+    // Router Quản Lý & Đổi PIN Nhân Viên
+    if (action === "staff_save")       return actionStaffSave(payload);
+    if (action === "staff_change_pin") return actionStaffChangePin(payload);
 
     // Router Xuất Hàng
     if (action === "append") return actionAppend(payload);
@@ -195,6 +248,7 @@ function actionAppend(payload) {
 
   try {
     var sheet = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+    ensureColumnExists(sheet, "staff");
     var lastRow = sheet.getLastRow();
     var lastCol = sheet.getLastColumn();
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
@@ -210,6 +264,7 @@ function actionAppend(payload) {
       });
     }
 
+    var defaultStaff = String(payload.staff || "").trim();
     var newRows = rows
       .filter(function(row) {
         var cleanId = String(row.id || '').replace(/^'+/, '').trim();
@@ -217,6 +272,9 @@ function actionAppend(payload) {
       })
       .map(function(row) {
         return headers.map(function(key) {
+          if (key === "staff") {
+            return (row["staff"] !== undefined && row["staff"] !== "") ? row["staff"] : defaultStaff;
+          }
           return row[key] !== undefined ? row[key] : "";
         });
       });
@@ -326,6 +384,7 @@ function actionUpdate(payload) {
 
   try {
     var sheet   = getOrCreateSheet(SHEET_NAME_PHIEUXUAT, HEADER_PHIEUXUAT);
+    ensureColumnExists(sheet, "staff");
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) {
       return jsonResponse({ status: "error", message: "Không tìm thấy dòng id=" + row.id });
@@ -368,10 +427,13 @@ function actionUpdate(payload) {
     var rowObj = {};
     headers.forEach(function(h, idx) { rowObj[h] = currentValues[idx]; });
 
-    var EDITABLE = ["date", "quantity", "sellingPrice", "purchasePrice", "note", "updatedAt"];
+    var EDITABLE = ["date", "quantity", "sellingPrice", "purchasePrice", "note", "staff", "updatedAt"];
     EDITABLE.forEach(function(key) {
       if (row[key] !== undefined) rowObj[key] = row[key];
     });
+    if (payload.staff && row["staff"] === undefined) {
+      rowObj["staff"] = payload.staff;
+    }
 
     var updatedValues = headers.map(function(key) { return rowObj[key]; });
     sheet.getRange(targetRow, 1, 1, lastCol).setValues([updatedValues]);
@@ -422,12 +484,11 @@ function actionRepackage(payload) {
     var lastCol = sheet.getLastColumn();
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
 
-    // Đảm bảo có cột sessionFromQty
-    if (headers.indexOf("sessionFromQty") === -1) {
-      sheet.getRange(1, lastCol + 1).setValue("sessionFromQty");
-      headers.push("sessionFromQty");
-      lastCol = headers.length;
-    }
+    // Đảm bảo có cột sessionFromQty và staff
+    ensureColumnExists(sheet, "sessionFromQty");
+    ensureColumnExists(sheet, "staff");
+    lastCol = sheet.getLastColumn();
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
 
     var existingIds = {};
     if (lastRow > 1) {
@@ -440,6 +501,7 @@ function actionRepackage(payload) {
       });
     }
 
+    var defaultStaff = String(payload.staff || "").trim();
     var newRows = rows
       .filter(function(row) {
         var cleanId = String(row.id || '').replace(/^'+/, '').trim();
@@ -448,6 +510,9 @@ function actionRepackage(payload) {
       .map(function(row) {
         return headers.map(function(key) {
           var val = row[key];
+          if (key === "staff") {
+            return (val !== undefined && val !== "") ? val : defaultStaff;
+          }
           if (val === undefined) {
             if (key === "sessionFromQty") return row["fromQuantity"] !== undefined ? row["fromQuantity"] : 0;
             return "";
@@ -578,13 +643,11 @@ function actionRepackageUpdate(payload) {
     var lastCol = sheet.getLastColumn();
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
 
-    // Đảm bảo có cột sessionFromQty trong headers
-    var sessionFromQtyColIdx = headers.indexOf("sessionFromQty");
-    if (sessionFromQtyColIdx === -1) {
-      sheet.getRange(1, lastCol + 1).setValue("sessionFromQty");
-      headers.push("sessionFromQty");
-      lastCol = headers.length;
-    }
+    // Đảm bảo có cột sessionFromQty và staff trong headers
+    ensureColumnExists(sheet, "sessionFromQty");
+    ensureColumnExists(sheet, "staff");
+    lastCol = sheet.getLastColumn();
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
 
     var idColIdx = headers.indexOf("id");
     if (idColIdx === -1) idColIdx = 0;
@@ -634,6 +697,8 @@ function actionRepackageUpdate(payload) {
       if (row.sessionFromQty !== undefined) rowObj["sessionFromQty"] = Number(row.sessionFromQty);
       if (row.toQuantity !== undefined)     rowObj["toQuantity"] = Number(row.toQuantity);
       if (row.note !== undefined)           rowObj["note"] = String(row.note);
+      if (row.staff !== undefined)          rowObj["staff"] = String(row.staff);
+      else if (payload.staff)               rowObj["staff"] = String(payload.staff);
       if (row.updatedAt !== undefined)      rowObj["updatedAt"] = Number(row.updatedAt);
 
       var newRowValues = headers.map(function(h) {
@@ -740,15 +805,154 @@ function getGlobalLockDate() {
   }
 }
 
-function setGlobalLockDate(isoDate) {
+function setGlobalLockDate(isoDate, lockedBy) {
   var cleanDate = toYMDBackend(isoDate);
   try {
+    var props = PropertiesService.getScriptProperties();
     if (cleanDate) {
-      PropertiesService.getScriptProperties().setProperty("LOCK_DATE", cleanDate);
+      props.setProperty("LOCK_DATE", cleanDate);
+      if (lockedBy) {
+        props.setProperty("LOCKED_BY", String(lockedBy).trim());
+      }
     } else {
-      PropertiesService.getScriptProperties().deleteProperty("LOCK_DATE");
+      props.deleteProperty("LOCK_DATE");
+      props.deleteProperty("LOCKED_BY");
     }
   } catch (e) {}
+}
+
+function ensureColumnExists(sheet, colName) {
+  if (!sheet || sheet.getLastColumn() < 1) return;
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+  if (headers.indexOf(colName) === -1) {
+    var newColIdx = lastCol + 1;
+    sheet.getRange(1, newColIdx).setValue(colName);
+    var cell = sheet.getRange(1, newColIdx);
+    cell.setFontWeight("bold");
+    cell.setBackground("#013755");
+    cell.setFontColor("#ffffff");
+  }
+}
+
+// ── Xử lý lưu danh sách nhân viên (Dành riêng cho Root) ───────
+function actionStaffSave(payload) {
+  var staffList = payload.staffList;
+  if (!staffList || !Array.isArray(staffList)) {
+    return jsonResponse({ status: "error", message: "Dữ liệu staffList không hợp lệ." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_STAFF, HEADER_STAFF);
+    var now = new Date().getTime();
+
+    var rowsToWrite = staffList.map(function(st) {
+      return [
+        "'" + String(st.id || "").replace(/^'+/, "").trim(),
+        String(st.name || "").trim(),
+        "'" + String(st.pin || "").replace(/^'+/, "").trim(),
+        String(st.role || "staff").trim(),
+        st.createdAt || now,
+        now,
+        st.status || "active"
+      ];
+    });
+
+    sheet.clearContents();
+    sheet.getRange(1, 1, 1, HEADER_STAFF.length).setValues([HEADER_STAFF]);
+    var headerRange = sheet.getRange(1, 1, 1, HEADER_STAFF.length);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#013755");
+    headerRange.setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+
+    if (rowsToWrite.length > 0) {
+      sheet.getRange(2, 1, rowsToWrite.length, HEADER_STAFF.length).setValues(rowsToWrite);
+      sheet.getRange(2, 1, rowsToWrite.length, 1).setNumberFormat("@");
+      sheet.getRange(2, 3, rowsToWrite.length, 1).setNumberFormat("@");
+    }
+
+    return jsonResponse({ status: "ok", message: "Đã cập nhật danh sách nhân viên thành công.", count: rowsToWrite.length });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── Xử lý nhân viên tự đổi PIN của chính mình ─────────────────
+function actionStaffChangePin(payload) {
+  var staffId = String(payload.staffId || "").replace(/^'+/, "").trim();
+  var oldPin = String(payload.oldPin || "").replace(/^'+/, "").trim();
+  var newPin = String(payload.newPin || "").replace(/^'+/, "").trim();
+
+  if (!staffId || !oldPin || !newPin) {
+    return jsonResponse({ status: "error", message: "Vui lòng cung cấp đầy đủ thông tin: Mã nhân viên, PIN cũ và PIN mới." });
+  }
+
+  if (oldPin === newPin) {
+    return jsonResponse({ status: "error", message: "Mã PIN mới phải khác mã PIN cũ." });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_STAFF, HEADER_STAFF);
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return jsonResponse({ status: "error", message: "Không tìm thấy dữ liệu nhân viên trong hệ thống." });
+    }
+
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var idColIdx = headers.indexOf("id");
+    var pinColIdx = headers.indexOf("pin");
+    var updateColIdx = headers.indexOf("updatedAt");
+
+    if (idColIdx === -1 || pinColIdx === -1) {
+      return jsonResponse({ status: "error", message: "Bảng nhân viên thiếu cột id hoặc pin." });
+    }
+
+    var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var targetRowIdx = -1;
+
+    // 1. Kiểm tra xác thực staffId và oldPin
+    for (var i = 0; i < allData.length; i++) {
+      var cellId = String(allData[i][idColIdx]).replace(/^'+/, "").trim();
+      if (cellId === staffId) {
+        var cellPin = String(allData[i][pinColIdx]).replace(/^'+/, "").trim();
+        if (cellPin !== oldPin) {
+          return jsonResponse({ status: "error", message: "Mã PIN hiện tại không chính xác!" });
+        }
+        targetRowIdx = i + 2;
+        break;
+      }
+    }
+
+    if (targetRowIdx === -1) {
+      return jsonResponse({ status: "error", message: "Không tìm thấy nhân viên trong hệ thống." });
+    }
+
+    sheet.getRange(targetRowIdx, pinColIdx + 1).setValue("'" + newPin);
+    sheet.getRange(targetRowIdx, pinColIdx + 1).setNumberFormat("@");
+    if (updateColIdx !== -1) {
+      sheet.getRange(targetRowIdx, updateColIdx + 1).setValue(new Date().getTime());
+    }
+
+    return jsonResponse({ status: "ok", message: "Đổi mã PIN thành công!" });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function jsonResponse(obj) {

@@ -8,15 +8,13 @@ root.ENV = {
   // Đường link Web App Google Apps Script kết nối Google Sheet
   SHEETS_URL: "https://script.google.com/macros/s/AKfycbyE6Sms6dOVaqowarrIx8Jdj53PcvZzqua4bafuiXhu2W9eWrQW57Tmw1d7lsAneo4/exec",
 
-  // Mã PIN bảo mật truy cập trang nhân viên (Ghi nhớ 7 ngày)
-  STAFF_PIN: "032023",
-
-  // Mã PIN bảo mật dùng cho chức năng Khóa / Mở khóa ngày sổ sách
-  LOCK_DATE_PIN: "110899",
+  // Mã PIN ROOT bảo mật tối cao (Toàn quyền quản trị, Khóa/Mở sổ, Quản lý PIN nhân viên)
+  ROOT_PIN: "032023",
 
   // Tên các tab trong Google Sheet
   SHEET_NAME_PHIEUXUAT: "PhieuXuat",
   SHEET_NAME_REPACKAGE: "repackage",
+  SHEET_NAME_STAFF: "NhanVien",
 
   // Phiên bản ứng dụng
   APP_VERSION: "1.0.0",

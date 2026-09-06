@@ -23,8 +23,9 @@
   <!-- Màn Hình Khóa Xác Thực Nhân Viên (Staff PIN Pad Auth Screen) -->
   <!-- ============================================================ -->
   <div id="staff-auth-screen" class="fixed inset-0 z-[100] bg-gradient-to-b from-pine-950 via-[#013755] to-pine-950 text-white flex flex-col items-center justify-center p-4 select-none overflow-y-auto hidden">
-    <div class="w-full max-w-sm flex flex-col items-center text-center space-y-5 my-auto">
-      
+    
+    <!-- STEP 1: CHỌN TÀI KHOẢN (MẶC ĐỊNH HIỂN THỊ KHI MỞ) -->
+    <div id="auth-step-user-picker" class="w-full max-w-sm flex flex-col items-center text-center space-y-5 my-auto">
       <!-- Logo Cửa Hàng -->
       <div class="relative">
         <div class="h-20 w-20 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-white/15 bg-pine-900 mx-auto flex items-center justify-center">
@@ -37,52 +38,25 @@
 
       <!-- Tiêu Đề -->
       <div class="space-y-1">
-        <h1 class="text-xl font-black tracking-tight text-white">Xác Thực Nhân Viên</h1>
-        <p class="text-xs text-pine-200">Nhập mã PIN để truy cập hệ thống quản lý SamPet</p>
+        <h1 class="text-xl font-black tracking-tight text-white">Chọn Tài Khoản Làm Việc</h1>
+        <p class="text-xs text-pine-200">Chọn tên nhân viên hoặc Quản trị viên để đăng nhập</p>
       </div>
 
-      <!-- Vùng Chấm Tròn PIN (PIN Dots Indicator) -->
-      <div id="auth-pin-dots-container" class="flex items-center justify-center gap-3 py-2">
-        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
-        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
-        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
-        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
-        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
-        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+      <!-- Danh Sách Tài Khoản (Cards List) -->
+      <div id="auth-users-list" class="w-full space-y-2 max-h-[48vh] overflow-y-auto px-1 py-1 custom-scrollbar">
+        <!-- Render động qua JavaScript: Thẻ Root + Thẻ các nhân viên -->
       </div>
 
-      <!-- Thông Báo Lỗi -->
-      <div id="auth-pin-error" class="text-xs text-red-300 bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-400/30 flex items-center gap-1.5 hidden">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-red-300" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+      <!-- Nút Tải Lại Danh Sách -->
+      <button type="button" id="btn-auth-refresh-staff"
+        class="inline-flex items-center gap-1.5 text-xs text-pine-300 hover:text-white transition-colors py-1 px-3 rounded-lg hover:bg-white/10 active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        <span id="auth-pin-error-text">Mã PIN không chính xác!</span>
-      </div>
+        <span>Tải lại danh sách nhân viên</span>
+      </button>
 
-      <!-- Bàn Phím Số Ảo (PIN Pad) -->
-      <div class="grid grid-cols-3 gap-3 w-full max-w-[280px] pt-1">
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="1">1</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="2">2</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="3">3</button>
-
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="4">4</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="5">5</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="6">6</button>
-
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="7">7</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="8">8</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="9">9</button>
-
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/25 text-xs font-bold text-pine-200 transition-all active:scale-95 uppercase tracking-wider" data-key="clear">Xóa Hết</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="0">0</button>
-        <button type="button" class="pin-key h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/25 text-lg font-bold text-pine-200 transition-all active:scale-95 flex items-center justify-center" data-key="backspace" aria-label="Xóa 1 số">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414-6.414a2 2 0 011.414-.586H19a2 2 0 012 2v10a2 2 0 01-2 2h-9.172a2 2 0 01-1.414-.586L3 12z" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Hướng dẫn & Nút chuyển sang Trang Khách Hàng -->
+      <!-- Chuyển sang Trang Khách Hàng -->
       <div class="pt-3 border-t border-white/10 w-full space-y-2">
         <p class="text-[11px] text-pine-300/80">Thiết bị sẽ ghi nhớ đăng nhập trong 7 ngày</p>
         <a href="./grooming.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 transition-colors py-1">
@@ -92,8 +66,85 @@
           </svg>
         </a>
       </div>
-
     </div>
+
+    <!-- STEP 2: NHẬP MÃ PIN CỦA TÀI KHOẢN ĐÃ CHỌN (BAN ĐẦU HIDDEN) -->
+    <div id="auth-step-pin-pad" class="w-full max-w-sm flex flex-col items-center text-center space-y-4 my-auto hidden">
+      <!-- Nút Quay Lại Chọn Tài Khoản Khác -->
+      <div class="w-full flex items-center justify-start">
+        <button type="button" id="btn-auth-back-to-picker"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-pine-200 hover:text-white bg-white/10 hover:bg-white/20 active:scale-95 px-3 py-1.5 rounded-xl transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Chọn tài khoản khác</span>
+        </button>
+      </div>
+
+      <!-- Thông Tin Tài Khoản Đang Chọn -->
+      <div class="flex flex-col items-center space-y-1.5">
+        <div id="auth-pin-selected-avatar"
+          class="h-14 w-14 rounded-2xl bg-amber-400 text-pine-950 font-bold text-2xl flex items-center justify-center shadow-lg ring-2 ring-white/20">
+          👤
+        </div>
+        <div>
+          <h2 id="auth-pin-selected-name" class="text-base font-bold text-white leading-snug">Tên nhân viên</h2>
+          <span id="auth-pin-selected-role" class="text-[10px] text-pine-200 bg-white/10 px-2 py-0.5 rounded-full font-mono">Nhân viên</span>
+        </div>
+        <p class="text-xs text-pine-300">Vui lòng nhập mã PIN của bạn</p>
+      </div>
+
+      <!-- Vùng Chấm Tròn PIN (PIN Dots Indicator) -->
+      <div id="auth-pin-dots-container" class="flex items-center justify-center gap-3 py-1">
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+        <span class="auth-dot h-3.5 w-3.5 rounded-full border-2 border-white/40 transition-all"></span>
+      </div>
+
+      <!-- Thông Báo Lỗi (Bảo Mật: Không lộ thông tin) -->
+      <div id="auth-pin-error" class="text-xs text-red-300 bg-red-500/20 px-3 py-1.5 rounded-xl border border-red-400/30 flex items-center gap-1.5 hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-red-300" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span id="auth-pin-error-text">Mã PIN không chính xác! Vui lòng thử lại.</span>
+      </div>
+
+      <!-- Bàn Phím Số Ảo (PIN Pad) -->
+      <div class="grid grid-cols-3 gap-2.5 w-full max-w-[280px]">
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="1">1</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="2">2</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="3">3</button>
+
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="4">4</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="5">5</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="6">6</button>
+
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="7">7</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="8">8</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="9">9</button>
+
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/25 text-xs font-bold text-pine-200 transition-all active:scale-95 uppercase tracking-wider" data-key="clear">Xóa</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-2xl font-bold text-white transition-all active:scale-95 shadow-xs" data-key="0">0</button>
+        <button type="button" class="pin-key h-12 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/25 text-lg font-bold text-pine-200 transition-all active:scale-95 flex items-center justify-center" data-key="backspace" aria-label="Xóa 1 số">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414-6.414a2 2 0 011.414-.586H19a2 2 0 012 2v10a2 2 0 01-2 2h-9.172a2 2 0 01-1.414-.586L3 12z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Nút Xác Nhận Đăng Nhập -->
+      <button type="button" id="btn-auth-submit"
+        class="w-full max-w-[280px] py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-pine-950 font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+        <span>Xác Nhận Đăng Nhập</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        </svg>
+      </button>
+    </div>
+
   </div>
 
   <!-- Splash screen -->
@@ -183,6 +234,12 @@
           Đang tải…
         </span>
 
+        <!-- Định danh Nhân Viên Đang Làm Việc -->
+        <div id="header-user-chip" class="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/15 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-white whitespace-nowrap border border-white/15 shadow-xs transition-colors cursor-pointer" title="Nhấp để xem tài khoản">
+          <span id="header-user-icon">👤</span>
+          <span id="header-user-name" class="truncate max-w-[90px] sm:max-w-[130px]">Nhân viên</span>
+        </div>
+
         <span id="badge-chip" class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-white whitespace-nowrap shadow-xs">
           <span class="sm:hidden font-bold">0 dòng</span>
           <span class="hidden sm:inline">Phiếu: 0 dòng</span>
@@ -217,6 +274,19 @@
         </button>
       </div>
 
+      <!-- Thẻ Định Danh Tài Khoản Đang Đăng Nhập -->
+      <div id="sidebar-user-card" class="mx-3 mt-3 p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between shadow-xs">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div id="sidebar-user-avatar" class="h-9 w-9 rounded-xl bg-pine-800 text-pine-100 font-bold flex items-center justify-center shrink-0 border border-white/10 text-sm shadow-xs">
+            👤
+          </div>
+          <div class="min-w-0">
+            <p id="sidebar-user-name" class="text-xs font-bold text-white truncate">Đang tải…</p>
+            <span id="sidebar-user-role" class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-white/15 text-pine-200">Staff</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Danh Sách Menu Điều Hướng -->
       <nav class="p-3 space-y-1.5">
         <p class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-pine-300/60">Nghiệp Vụ Kho</p>
@@ -246,11 +316,31 @@
         </button>
 
         <div class="my-3 border-t border-white/10"></div>
-        <p class="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-pine-300/60">Tiện Ích & Khách Hàng</p>
+        <p class="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-pine-300/60">Tài Khoản & Tiện Ích</p>
+
+        <!-- Đổi Mã PIN Cá Nhân (Dành cho nhân viên) -->
+        <button type="button" id="sidebar-btn-change-pin"
+          class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white active:scale-95">
+          <div class="flex items-center gap-3">
+            <span class="text-sm">🔑</span>
+            <span>Đổi Mã PIN Của Tôi</span>
+          </div>
+          <span class="text-[10px] text-pine-300 font-mono">Đổi PIN</span>
+        </button>
+
+        <!-- Quản Lý Nhân Viên & PIN (Chỉ dành cho ROOT) -->
+        <button type="button" id="sidebar-btn-manage-staff"
+          class="hidden w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/20 active:scale-95">
+          <div class="flex items-center gap-3">
+            <span class="text-sm">👥</span>
+            <span>Quản Lý Nhân Viên & PIN</span>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/25 text-amber-200 font-bold font-mono">Root</span>
+        </button>
 
         <!-- Mẫu Grooming Khách Hàng -->
         <a href="./grooming.html" target="_blank"
-          class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/20 active:scale-95">
+          class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/20 active:scale-95">
           <div class="flex items-center gap-3">
             <span class="text-sm">✂️</span>
             <span>Mẫu Grooming Khách Hàng</span>
@@ -267,21 +357,21 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
             </svg>
-            <span>Khóa Ngày Sổ Sách</span>
+            <span id="sidebar-lock-title">Khóa Ngày Sổ Sách</span>
           </div>
-          <span class="text-[10px] text-amber-300 font-mono">PIN 🔒</span>
+          <span id="sidebar-lock-badge" class="text-[10px] text-amber-300 font-mono">Root 🔒</span>
         </button>
 
         <div class="my-2 border-t border-white/10"></div>
 
-        <!-- Đăng Xuất (Khóa Ứng Dụng) -->
+        <!-- Đăng Xuất (Đổi Tài Khoản) -->
         <button type="button" id="sidebar-btn-logout"
           class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 active:scale-95">
           <div class="flex items-center gap-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>Đăng Xuất (Khóa App)</span>
+            <span>Đổi Tài Khoản / Khóa</span>
           </div>
           <span class="text-[10px] text-red-400 font-mono">🔒</span>
         </button>
@@ -940,8 +1030,8 @@
     </div>
 
     <!-- Modal cài đặt Khóa ngày sổ sách -->
-    <div id="lock-date-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div class="bg-white rounded-2xl shadow-lift w-full max-w-sm p-6 space-y-4">
+    <div id="lock-date-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs px-4">
+      <div class="bg-white rounded-3xl shadow-lift w-full max-w-sm p-6 space-y-4 animate-fade-in-up border border-slate-100">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div class="flex items-center gap-2 text-pine-800">
             <span class="p-2 bg-amber-100 rounded-xl text-amber-700">
@@ -949,9 +1039,25 @@
                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
               </svg>
             </span>
-            <h3 class="text-base font-semibold">Khóa Ngày Sổ Sách</h3>
+            <div>
+              <h3 id="lock-date-modal-title" class="text-base font-semibold leading-tight">Khóa Ngày Sổ Sách</h3>
+              <div class="mt-0.5">
+                <span id="lock-date-role-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300/60">👑 Root</span>
+              </div>
+            </div>
           </div>
-          <button id="btn-lock-date-close" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
+          <button id="btn-lock-date-close" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg p-1 leading-none">&times;</button>
+        </div>
+
+        <!-- Thông báo quyền nhân viên (Chỉ xem) -->
+        <div id="lock-date-staff-notice" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1 text-xs text-slate-600">
+          <p class="font-semibold text-slate-800 flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-pine-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Chế độ chỉ xem thông tin:
+          </p>
+          <p class="text-slate-500 leading-relaxed">Bạn đang đăng nhập quyền <strong>Nhân viên</strong>. Chỉ Quản trị viên (Root) mới có quyền thiết lập hoặc thay đổi ngày khóa sổ sách.</p>
         </div>
 
         <div class="bg-amber-50/80 rounded-xl p-3.5 space-y-1.5 text-xs text-amber-900 border border-amber-200/60 leading-relaxed">
@@ -961,28 +1067,149 @@
             </svg>
             Quy tắc khóa ngày:
           </p>
-          <p>Khi bạn chọn <strong>Ngày A</strong>, tất cả dữ liệu từ ngày A trở về trước sẽ bị khóa cứng: không thể thêm phiếu xuất, chiết hàng, sửa hoặc xóa dữ liệu cũ.</p>
+          <p>Tất cả dữ liệu từ ngày mốc khóa trở về trước sẽ bị khóa cứng: không thể thêm phiếu xuất, chiết hàng, sửa hoặc xóa dữ liệu cũ.</p>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1.5">Chọn ngày mốc khóa sổ (Khóa &le; ngày này)</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1.5">Ngày mốc khóa sổ (Khóa &le; ngày này)</label>
           <input id="lock-date-input" type="date"
-            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink transition-colors" />
           <p id="lock-date-status-desc" class="text-[11px] text-slate-500 mt-1.5"></p>
         </div>
 
-        <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1.5">Mã PIN xác thực <span class="text-red-500">*</span></label>
-          <input id="lock-date-pin" type="password" maxlength="10" inputmode="numeric" placeholder="Nhập mã PIN để xác nhận…"
-            class="w-full rounded-xl border border-slate-200 bg-paper/40 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink tracking-widest" />
-          <p class="text-[11px] text-slate-400 mt-1">Cần nhập đúng mã PIN để thực hiện khóa hoặc mở khóa sổ sách.</p>
+        <div class="flex gap-2 justify-end pt-2 border-t border-slate-100">
+          <button id="btn-lock-date-cancel" type="button"
+            class="rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 px-4 py-2 text-xs font-medium transition-colors">Đóng</button>
+          <div id="lock-date-action-buttons" class="flex gap-2">
+            <button id="btn-lock-date-clear" type="button"
+              class="rounded-xl border border-red-200 text-red-600 hover:bg-red-50 px-3.5 py-2 text-xs font-medium transition-colors">Mở khóa (Hủy)</button>
+            <button id="btn-lock-date-save" type="button"
+              class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-xs font-medium shadow-card transition-colors">Lưu ngày khóa</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- Modal Nhân Viên Tự Đổi PIN                              -->
+    <!-- ======================================================== -->
+    <div id="modal-self-change-pin" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
+      <div class="bg-white rounded-3xl shadow-lift w-full max-w-sm p-6 space-y-4 animate-fade-in-up border border-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2.5 text-pine-900">
+            <span class="p-2 bg-pine-100 rounded-xl text-pine-800 text-base">🔑</span>
+            <div>
+              <h3 class="text-sm font-bold">Đổi Mã PIN Cá Nhân</h3>
+              <p id="self-change-pin-username" class="text-[11px] text-slate-500 font-medium">Nhân viên</p>
+            </div>
+          </div>
+          <button id="btn-close-self-change-pin" type="button" class="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-sm">&times;</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Mã PIN Hiện Tại <span class="text-red-500">*</span></label>
+            <input id="self-change-pin-old" type="password" maxlength="8" inputmode="numeric" placeholder="Nhập PIN đang dùng…"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-mono tracking-widest text-slate-800" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Mã PIN Mới (4 - 8 số) <span class="text-red-500">*</span></label>
+            <input id="self-change-pin-new" type="password" maxlength="8" inputmode="numeric" placeholder="Nhập PIN mới…"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-mono tracking-widest text-slate-800" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Xác Nhận PIN Mới <span class="text-red-500">*</span></label>
+            <input id="self-change-pin-confirm" type="password" maxlength="8" inputmode="numeric" placeholder="Nhập lại PIN mới…"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-mono tracking-widest text-slate-800" />
+          </div>
         </div>
 
         <div class="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          <button id="btn-lock-date-clear" type="button"
-            class="rounded-xl border border-red-200 text-red-600 hover:bg-red-50 px-3.5 py-2 text-xs font-medium">Mở khóa (Hủy)</button>
-          <button id="btn-lock-date-save" type="button"
-            class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-xs font-medium shadow-card">Lưu ngày khóa</button>
+          <button id="btn-cancel-self-change-pin" type="button"
+            class="rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 text-xs font-semibold">Hủy</button>
+          <button id="btn-self-change-pin-save" type="button"
+            class="rounded-xl bg-pine-800 hover:bg-pine-900 text-white px-5 py-2 text-xs font-bold shadow-card active:scale-95 transition-all">Lưu Mã PIN Mới</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- Modal Quản Lý Nhân Viên & PIN (Root Admin)               -->
+    <!-- ======================================================== -->
+    <div id="modal-root-staff-manage" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs px-3 sm:px-4">
+      <div class="bg-white rounded-3xl shadow-lift w-full max-w-lg p-5 sm:p-6 space-y-4 animate-fade-in-up border border-slate-100 max-h-[92vh] flex flex-col justify-between">
+        
+        <!-- Header Modal -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+          <div class="flex items-center gap-2.5">
+            <span class="p-2 bg-amber-100 text-amber-900 rounded-2xl text-lg">👥</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm sm:text-base font-black text-slate-900">Quản Lý Nhân Viên & Mã PIN</h3>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-400 text-pine-950 uppercase font-mono">Root</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Phân quyền và cấp mã PIN riêng cho từng nhân viên</p>
+            </div>
+          </div>
+          <button id="btn-close-root-staff-manage" type="button" class="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-sm">&times;</button>
+        </div>
+
+        <!-- Body Cuộn Được: Danh Sách Nhân Viên & Form Thêm/Sửa -->
+        <div class="space-y-4 overflow-y-auto pr-1 scroll-thin flex-1">
+          
+          <!-- Thanh Công Cụ & Thống Kê -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+              <span>Danh Sách Nhân Viên</span>
+              <span id="root-staff-count-badge" class="px-2 py-0.2 rounded-full bg-pine-100 text-pine-900 text-[11px] font-mono">0</span>
+            </div>
+            <button type="button" id="btn-sync-staff-from-sheet" class="inline-flex items-center gap-1 text-xs text-pine-700 hover:text-pine-900 font-semibold cursor-pointer py-1 px-2 rounded-lg hover:bg-pine-50 active:scale-95 transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Đồng bộ lại</span>
+            </button>
+          </div>
+
+          <!-- Container Các Thẻ Nhân Viên -->
+          <div id="root-staff-list" class="space-y-2.5">
+            <!-- Render động từ JavaScript -->
+          </div>
+
+          <!-- Khối Thêm / Chỉnh Sửa Nhân Viên -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <h4 id="add-staff-form-title" class="text-xs font-bold uppercase tracking-wider text-slate-700">Thêm Nhân Viên Mới</h4>
+            <input type="hidden" id="add-staff-id" value="" />
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Tên Nhân Viên <span class="text-red-500">*</span></label>
+                <input id="add-staff-name" type="text" placeholder="VD: Nguyễn Văn A…"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pine-500 text-slate-800" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Mã PIN (4 - 8 số) <span class="text-red-500">*</span></label>
+                <input id="add-staff-pin" type="password" maxlength="8" inputmode="numeric" placeholder="VD: 1234…"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pine-500 font-mono tracking-widest text-slate-800" />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button type="button" id="btn-cancel-edit-staff" class="hidden px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-200 transition-all">
+                Hủy Chỉnh Sửa
+              </button>
+              <button type="button" id="btn-submit-staff" class="px-4 py-2 rounded-xl bg-pine-800 hover:bg-pine-900 active:scale-95 text-white text-xs font-bold shadow-sm transition-all">
+                + Thêm Nhân Viên
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 shrink-0">
+          <span>Dữ liệu lưu tại tab <strong>NhanVien</strong> trên Google Sheets</span>
+          <button type="button" onclick="document.getElementById('btn-close-root-staff-manage').click()" class="font-semibold text-slate-600 hover:text-slate-900">Đóng</button>
         </div>
       </div>
     </div>

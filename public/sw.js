@@ -47,18 +47,26 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Cache-first cho mọi thứ còn lại
+  // Cache-first cho mọi thứ còn lại (hỗ trợ ignoreSearch để khớp query string như ?t=...)
   e.respondWith(
-    caches.match(e.request).then((cached) => {
+    caches.match(e.request, { ignoreSearch: true }).then((cached) => {
       if (cached) return cached;
-      return fetch(e.request).then((res) => {
-        // Cache response mới nếu là GET thành công
-        if (e.request.method === "GET" && res.status === 200) {
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
-        }
-        return res;
-      }).catch(() => cached);
+      return fetch(e.request)
+        .then((res) => {
+          // Cache response mới nếu là GET thành công
+          if (e.request.method === "GET" && res.status === 200) {
+            const resClone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+          }
+          return res;
+        })
+        .catch(() => {
+          return cached || new Response("Network error / offline", {
+            status: 503,
+            statusText: "Service Unavailable",
+            headers: { "Content-Type": "text/plain" }
+          });
+        });
     })
   );
 });
