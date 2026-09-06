@@ -31,17 +31,15 @@ export function hideSplash() {
 }
 
 export function setStatus(text, tone) {
-  const chip = $("status-chip");
-  if (chip) {
+  const sideCsv = $("sidebar-csv-status");
+  if (sideCsv) {
     const dot = tone === "ok"
       ? "bg-emerald-400"
       : tone === "err"
         ? "bg-red-400"
         : "bg-amber-300 animate-pulse";
-    chip.innerHTML = `<span class="h-2 w-2 rounded-full ${dot}"></span>${escapeHtml(text)}`;
+    sideCsv.innerHTML = `<span class="h-2 w-2 rounded-full ${dot} inline-block"></span> ${escapeHtml(text)}`;
   }
-  const sideCsv = $("sidebar-csv-status");
-  if (sideCsv) sideCsv.textContent = text;
 }
 
 export function openSidebar() {
@@ -72,8 +70,6 @@ export function switchTab(tab) {
 
   const tabXuat = $("tab-xuat-container");
   const tabChiet = $("tab-chiet-container");
-  const btnXuat = $("tab-btn-xuat");
-  const btnChiet = $("tab-btn-chiet");
   const headerTitle = $("header-title");
   const badgeChip = $("badge-chip");
 
@@ -86,18 +82,14 @@ export function switchTab(tab) {
   if (tabChiet) tabChiet.classList.toggle("hidden", isXuat);
 
   if (isXuat) {
-    if (btnXuat) btnXuat.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap bg-white text-pine-900 shadow-sm active:scale-95";
-    if (btnChiet) btnChiet.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap text-white/80 hover:text-white active:scale-95";
-    if (sideBtnXuat) sideBtnXuat.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
-    if (sideBtnChiet) sideBtnChiet.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
-    if (headerTitle) headerTitle.innerHTML = `<span class="md:hidden">Xuất Hàng</span><span class="hidden md:inline">Phiếu xuất hàng hàng ngày</span>`;
+    if (sideBtnXuat) sideBtnXuat.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
+    if (sideBtnChiet) sideBtnChiet.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
+    if (headerTitle) headerTitle.innerHTML = `<span class="sm:hidden">Xuất Hàng</span><span class="hidden sm:inline">Phiếu xuất hàng hàng ngày</span>`;
     if (badgeChip) badgeChip.innerHTML = `<span class="sm:hidden font-bold">${state.phieu.length} dòng</span><span class="hidden sm:inline">Phiếu: ${state.phieu.length} dòng</span>`;
   } else {
-    if (btnChiet) btnChiet.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap bg-white text-pine-900 shadow-sm active:scale-95";
-    if (btnXuat) btnXuat.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap text-white/80 hover:text-white active:scale-95";
-    if (sideBtnChiet) sideBtnChiet.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
-    if (sideBtnXuat) sideBtnXuat.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
-    if (headerTitle) headerTitle.innerHTML = `<span class="md:hidden">Chiết Hàng</span><span class="hidden md:inline">Chiết hàng & Đóng gói sản phẩm</span>`;
+    if (sideBtnChiet) sideBtnChiet.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
+    if (sideBtnXuat) sideBtnXuat.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
+    if (headerTitle) headerTitle.innerHTML = `<span class="sm:hidden">Chiết Hàng</span><span class="hidden sm:inline">Chiết hàng & Đóng gói sản phẩm</span>`;
     if (badgeChip) badgeChip.innerHTML = `<span class="sm:hidden font-bold">${state.repackage.targets.length} SP</span><span class="hidden sm:inline">Đích: ${state.repackage.targets.length} SP</span>`;
     renderRepackageTargets();
   }
@@ -186,12 +178,7 @@ function initPullToRefresh() {
 
 // Khởi tạo các module và tải dữ liệu khi trang tải xong
 document.addEventListener("DOMContentLoaded", () => {
-  // Tab Switcher
-  const btnXuat = $("tab-btn-xuat");
-  if (btnXuat) btnXuat.addEventListener("click", () => switchTab("xuat"));
-
-  const btnChiet = $("tab-btn-chiet");
-  if (btnChiet) btnChiet.addEventListener("click", () => switchTab("chiet"));
+  // Tab Switcher (sidebar only, header tab buttons removed)
 
   // Khởi tạo các Views & Modals
   initLockDateModal();
@@ -364,7 +351,41 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!screen) return;
     screen.classList.remove("hidden");
     backToUserPicker();
-    syncStaffList().then(() => renderAuthUserPicker()).catch(() => {});
+
+    // Show loading skeleton while fetching staff list
+    const listEl = $("auth-users-list");
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="space-y-2 animate-pulse">
+          <div class="w-full p-3 rounded-2xl bg-amber-500/10 border border-amber-400/20 flex items-center gap-3">
+            <div class="h-11 w-11 rounded-xl bg-amber-400/30 shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-amber-300/20 rounded-full w-2/3"></div>
+              <div class="h-2.5 bg-amber-300/10 rounded-full w-1/2"></div>
+            </div>
+          </div>
+          <div class="w-full p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+            <div class="h-11 w-11 rounded-xl bg-white/10 shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-white/10 rounded-full w-3/4"></div>
+              <div class="h-2.5 bg-white/5 rounded-full w-1/3"></div>
+            </div>
+          </div>
+          <div class="w-full p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+            <div class="h-11 w-11 rounded-xl bg-white/10 shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-white/10 rounded-full w-1/2"></div>
+              <div class="h-2.5 bg-white/5 rounded-full w-2/5"></div>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-xs text-pine-300/60 pt-2">Đang tải danh sách nhân viên…</p>
+      `;
+    }
+
+    syncStaffList()
+      .then(() => renderAuthUserPicker())
+      .catch(() => renderAuthUserPicker());
   }
 
   function hideAuthScreen() {
@@ -379,25 +400,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const user = getCurrentUser();
     if (!user) return;
 
-    const headerName = $("header-user-name");
-    const headerIcon = $("header-user-icon");
-    const headerChip = $("header-user-chip");
     const sidebarName = $("sidebar-user-name");
     const sidebarRole = $("sidebar-user-role");
     const sidebarAvatar = $("sidebar-user-avatar");
     const sidebarBtnManage = $("sidebar-btn-manage-staff");
 
     const isRoot = isRootUser();
-
-    if (headerName) headerName.textContent = isRoot ? "Root Admin" : user.name;
-    if (headerIcon) headerIcon.textContent = isRoot ? "👑" : "👤";
-    if (headerChip) {
-      if (isRoot) {
-        headerChip.classList.add("bg-amber-500/25", "border-amber-400/30", "text-amber-200");
-      } else {
-        headerChip.classList.remove("bg-amber-500/25", "border-amber-400/30", "text-amber-200");
-      }
-    }
 
     if (sidebarName) sidebarName.textContent = user.name;
     if (sidebarRole) {
@@ -569,7 +577,6 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btn-open-sidebar")?.addEventListener("click", openSidebar);
   $("btn-close-sidebar")?.addEventListener("click", closeSidebar);
   $("sidebar-drawer-backdrop")?.addEventListener("click", closeSidebar);
-  $("header-user-chip")?.addEventListener("click", openSidebar);
 
   $("sidebar-btn-xuat")?.addEventListener("click", () => {
     switchTab("xuat");

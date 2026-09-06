@@ -184,6 +184,7 @@ export function initLockDateModal() {
       btnSave.textContent = "Đang lưu…";
 
       setLockDate(isoDate);
+      updateLockDateUI();
 
       try {
         const data = await setLockDateAPI(isoDate);
@@ -214,6 +215,7 @@ export function initLockDateModal() {
       btnClear.textContent = "Đang mở…";
 
       setLockDate("");
+      updateLockDateUI();
 
       try {
         const data = await setLockDateAPI("");
