@@ -5,7 +5,7 @@ try {
   console.warn("Không thể nạp env.js trong Service Worker:", e);
 }
 
-const CACHE_NAME = "sam-pet-v" + (self.ENV && self.ENV.APP_VERSION ? self.ENV.APP_VERSION : "1.0.0");
+const CACHE_NAME = "sam-pet-v" + (self.ENV && self.ENV.APP_VERSION ? self.ENV.APP_VERSION : "2.1.0");
 const ASSETS = [
   "./",
   "./index.html",

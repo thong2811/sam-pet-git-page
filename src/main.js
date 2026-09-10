@@ -67,11 +67,35 @@ export function closeSidebar() {
   document.body.classList.remove("overflow-hidden");
 }
 
-export function switchTab(tab) {
-  state.activeTab = tab;
-  const isXuat = tab === "xuat";
-  const isChiet = tab === "chiet";
-  const isKiemKe = tab === "kiemke";
+const VALID_TABS = ["xuat", "chiet", "kiemke"];
+
+export function getSavedTab() {
+  const hash = (location.hash || "").replace(/^#/, "").trim().toLowerCase();
+  if (VALID_TABS.includes(hash)) return hash;
+
+  try {
+    const local = localStorage.getItem("sam_pet_active_tab");
+    if (local && VALID_TABS.includes(local)) return local;
+  } catch (e) {}
+
+  return "xuat";
+}
+
+export function switchTab(tab, updateUrl = true) {
+  const targetTab = VALID_TABS.includes(tab) ? tab : "xuat";
+  state.activeTab = targetTab;
+
+  try {
+    localStorage.setItem("sam_pet_active_tab", targetTab);
+  } catch (e) {}
+
+  if (updateUrl && location.hash !== "#" + targetTab) {
+    history.replaceState(null, "", "#" + targetTab);
+  }
+
+  const isXuat = targetTab === "xuat";
+  const isChiet = targetTab === "chiet";
+  const isKiemKe = targetTab === "kiemke";
 
   const tabXuat = $("tab-xuat-container");
   const tabChiet = $("tab-chiet-container");
@@ -209,6 +233,17 @@ document.addEventListener("DOMContentLoaded", () => {
   initRepackageForm();
   initRepackageHistory();
   initStockCheckView();
+
+  // Khôi phục tab đang mở trước đó khi reload trang (URL hash hoặc localStorage)
+  switchTab(getSavedTab(), false);
+
+  // Lắng nghe thay đổi hash khi bấm nút Back/Forward trên trình duyệt
+  window.addEventListener("hashchange", () => {
+    const newTab = (location.hash || "").replace(/^#/, "").trim().toLowerCase();
+    if (VALID_TABS.includes(newTab) && newTab !== state.activeTab) {
+      switchTab(newTab, false);
+    }
+  });
 
   // Dọn dẹp cache local cũ nếu có
   localStorage.removeItem("sam_pet_repackage_history");

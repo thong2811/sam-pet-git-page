@@ -18,7 +18,7 @@ root.ENV = {
   SHEET_NAME_STOCKCHECK: "KiemKe",
 
   // Phiên bản ứng dụng
-  APP_VERSION: "1.0.0",
+  APP_VERSION: "2.1.0",
 
   // Thông tin cửa hàng & Liên hệ khách hàng (Trang Grooming)
   STORE_NAME: "Sam Pet - Dịch Vụ Thú Cưng",

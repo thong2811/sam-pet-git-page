@@ -1,6 +1,6 @@
 {
   "name": "sam-pet-git-page",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "SamPet Web App & Google Apps Script synchronization",
   "private": true,
   "type": "module",
