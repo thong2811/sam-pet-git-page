@@ -27,6 +27,9 @@ export const CONFIG = {
   get SHEET_NAME_STAFF() {
     return getEnv().SHEET_NAME_STAFF || "NhanVien";
   },
+  get SHEET_NAME_STOCKCHECK() {
+    return getEnv().SHEET_NAME_STOCKCHECK || "KiemKe";
+  },
   get APP_VERSION() {
     return getEnv().APP_VERSION || "2.0.0";
   },

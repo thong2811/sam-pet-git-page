@@ -23,6 +23,7 @@
 var SHEET_NAME_PHIEUXUAT = "PhieuXuat";
 var SHEET_NAME_REPACKAGE = "repackage";
 var SHEET_NAME_STAFF = "NhanVien";
+var SHEET_NAME_STOCKCHECK = "KiemKe";
 var LOCK_TIMEOUT_MS = 10000; // chờ lock tối đa 10 giây
 
 var HEADER_PHIEUXUAT = [
@@ -41,6 +42,11 @@ var HEADER_REPACKAGE = [
 
 var HEADER_STAFF = [
   "id", "name", "pin", "role", "createdAt", "updatedAt", "status"
+];
+
+var HEADER_STOCKCHECK = [
+  "id", "date", "productId", "productName", "unit",
+  "actualStock", "note", "staff", "createdAt", "updatedAt"
 ];
 
 // ── doGet ────────────────────────────────────────────────────
@@ -129,7 +135,41 @@ function doGet(e) {
       return jsonResponse({ status: "ok", lockDate: lockDate, repackageRows: repackageRows });
     }
 
-    // 2. Trả về dữ liệu tab XUẤT HÀNG (Mặc định)
+    // 2. Trả về dữ liệu tab KIỂM KÊ (stock_check)
+    if (type === "stock_check") {
+      var ssCheck = SpreadsheetApp.getActiveSpreadsheet();
+      var sheetCheck = ssCheck.getSheetByName(SHEET_NAME_STOCKCHECK);
+
+      if (!sheetCheck || sheetCheck.getLastRow() <= 1) {
+        return jsonResponse({ status: "ok", lockDate: lockDate, rows: [] });
+      }
+
+      var lastRowC = sheetCheck.getLastRow();
+      var lastColC = sheetCheck.getLastColumn();
+      var headerRowC = sheetCheck.getRange(1, 1, 1, lastColC).getValues()[0].map(function(h) { return String(h).trim(); });
+      var dataC = sheetCheck.getRange(2, 1, lastRowC - 1, lastColC).getValues();
+
+      var checkRows = dataC.map(function(row) {
+        var obj = {};
+        headerRowC.forEach(function(key, i) {
+          if (!key) return;
+          var val = row[i];
+          if (key === "date") {
+            val = normalizeDateString(val);
+          } else if (key === "actualStock" || key === "createdAt" || key === "updatedAt") {
+            val = val !== "" && !isNaN(val) ? Number(val) : val;
+          } else {
+            val = val !== undefined ? String(val) : "";
+          }
+          obj[key] = val;
+        });
+        return obj;
+      });
+
+      return jsonResponse({ status: "ok", lockDate: lockDate, rows: checkRows });
+    }
+
+    // 3. Trả về dữ liệu tab XUẤT HÀNG (Mặc định)
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(SHEET_NAME_PHIEUXUAT);
 
@@ -209,6 +249,9 @@ function doPost(e) {
     if (action === "repackage")        return actionRepackage(payload);
     if (action === "repackage_delete") return actionRepackageDelete(payload);
     if (action === "repackage_update") return actionRepackageUpdate(payload);
+
+    // Router Kiểm Kê Kho
+    if (action === "stock_check_save") return actionStockCheckSave(payload);
 
     return jsonResponse({ status: "error", message: "action không hợp lệ: " + action });
 
@@ -950,6 +993,130 @@ function actionStaffChangePin(payload) {
     }
 
     return jsonResponse({ status: "ok", message: "Đổi mã PIN thành công!" });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================
+//  LOGIC CHO TAB KIỂM KÊ (KiemKe)
+// ============================================================
+
+function actionStockCheckSave(payload) {
+  var rows = payload.rows || [];
+  var deletedProductIds = payload.deletedProductIds || [];
+
+  if (rows.length === 0 && deletedProductIds.length === 0) {
+    return jsonResponse({ status: "error", message: "Không có dữ liệu kiểm kê để lưu." });
+  }
+
+  var auditDate = payload.date || (rows[0] && rows[0].date) || "";
+  if (auditDate && isDateLockedBackend(auditDate)) {
+    return jsonResponse({
+      status: "error",
+      message: "Không thể lưu kiểm kê: Ngày " + normalizeDateString(auditDate) + " đã bị khóa sổ."
+    });
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+  } catch (e) {
+    return jsonResponse({ status: "error", message: "Hệ thống bận, vui lòng thử lại." });
+  }
+
+  try {
+    var sheet = getOrCreateSheet(SHEET_NAME_STOCKCHECK, HEADER_STOCKCHECK);
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+    var idColIdx = headers.indexOf("id");
+    var pidColIdx = headers.indexOf("productId");
+    var dateColIdx = headers.indexOf("date");
+    var stockColIdx = headers.indexOf("actualStock");
+    var staffColIdx = headers.indexOf("staff");
+    var updatedColIdx = headers.indexOf("updatedAt");
+
+    var normAuditDate = normalizeDateString(auditDate);
+    var defaultStaff = String(payload.staff || "").trim();
+    var now = new Date().getTime();
+
+    // 1. Xử lý các món cần xóa (deletedProductIds)
+    var deleteSet = {};
+    deletedProductIds.forEach(function(p) {
+      deleteSet[String(p).replace(/^'+/, "").trim()] = true;
+    });
+
+    if (lastRow > 1 && deletedProductIds.length > 0) {
+      var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+      for (var i = allData.length - 1; i >= 0; i--) {
+        var rowPid = String(allData[i][pidColIdx]).replace(/^'+/, "").trim();
+        var rowDate = normalizeDateString(allData[i][dateColIdx]);
+        if (rowDate === normAuditDate && deleteSet[rowPid]) {
+          sheet.deleteRow(i + 2);
+        }
+      }
+    }
+
+    // 2. Tìm các dòng đã có sẵn trong ngày để cập nhật đè (Upsert), tránh nhân đôi dòng
+    lastRow = sheet.getLastRow();
+    var existingRowMap = {};
+    if (lastRow > 1) {
+      var currentData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+      for (var j = 0; j < currentData.length; j++) {
+        var rPid = String(currentData[j][pidColIdx]).replace(/^'+/, "").trim();
+        var rDate = normalizeDateString(currentData[j][dateColIdx]);
+        if (rDate === normAuditDate) {
+          existingRowMap[rPid] = j + 2; // số thứ tự hàng trong sheet
+        }
+      }
+    }
+
+    var newRows = [];
+    rows.forEach(function(row) {
+      var cleanPid = String(row.productId || "").replace(/^'+/, "").trim();
+      var stockVal = (row.actualStock !== undefined && row.actualStock !== "") ? Number(row.actualStock) : 0;
+      var staffVal = (row.staff !== undefined && row.staff !== "") ? row.staff : defaultStaff;
+
+      if (existingRowMap[cleanPid]) {
+        // Cập nhật dòng đã có sẵn
+        var targetRow = existingRowMap[cleanPid];
+        if (stockColIdx !== -1) sheet.getRange(targetRow, stockColIdx + 1).setValue(stockVal);
+        if (staffColIdx !== -1) sheet.getRange(targetRow, staffColIdx + 1).setValue(staffVal);
+        if (updatedColIdx !== -1) sheet.getRange(targetRow, updatedColIdx + 1).setValue(now);
+      } else {
+        // Thêm dòng mới
+        var cleanId = String(row.id || (now.toString(16) + Math.random().toString(16).slice(2, 8))).replace(/^'+/, "").trim();
+        var newRowArr = headers.map(function(key) {
+          if (key === "id") return "'" + cleanId;
+          if (key === "productId") return "'" + cleanPid;
+          if (key === "date") return normAuditDate;
+          if (key === "actualStock") return stockVal;
+          if (key === "staff") return staffVal;
+          if (key === "createdAt") return row.createdAt || now;
+          if (key === "updatedAt") return now;
+          return row[key] !== undefined ? row[key] : "";
+        });
+        newRows.push(newRowArr);
+      }
+    });
+
+    if (newRows.length > 0) {
+      var insertAt = sheet.getLastRow() + 1;
+      sheet.getRange(insertAt, 1, newRows.length, headers.length).setValues(newRows);
+      if (idColIdx !== -1) sheet.getRange(insertAt, idColIdx + 1, newRows.length, 1).setNumberFormat("@");
+      if (pidColIdx !== -1) sheet.getRange(insertAt, pidColIdx + 1, newRows.length, 1).setNumberFormat("@");
+      if (dateColIdx !== -1) sheet.getRange(insertAt, dateColIdx + 1, newRows.length, 1).setNumberFormat("@");
+    }
+
+    SpreadsheetApp.flush();
+
+    return jsonResponse({
+      status: "ok",
+      message: "Đã lưu " + rows.length + " sản phẩm thành công.",
+      rowsWritten: rows.length,
+      rowsDeleted: deletedProductIds.length
+    });
   } finally {
     lock.releaseLock();
   }

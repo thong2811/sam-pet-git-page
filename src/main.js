@@ -25,6 +25,9 @@ import { initHistoryView, loadSheetHistory } from "./views/export/history-view.j
 import { initRepackageForm, renderRepackageTargets } from "./views/repackage/repackage-form.js";
 import { initRepackageHistory, loadRepackageHistory } from "./views/repackage/repackage-history.js";
 
+// Stock check (Kiểm kê) views
+import { initStockCheckView, renderStockCheck, updateStockCheckStats, loadStockCheckFromSheets } from "./views/inventory/stock-check-view.js";
+
 export function hideSplash() {
   const splash = $("splash");
   if (splash) splash.classList.add("hidden");
@@ -67,35 +70,49 @@ export function closeSidebar() {
 export function switchTab(tab) {
   state.activeTab = tab;
   const isXuat = tab === "xuat";
+  const isChiet = tab === "chiet";
+  const isKiemKe = tab === "kiemke";
 
   const tabXuat = $("tab-xuat-container");
   const tabChiet = $("tab-chiet-container");
+  const tabKiemKe = $("tab-kiemke-container");
   const headerTitle = $("header-title");
   const badgeChip = $("badge-chip");
 
   const sideBtnXuat = $("sidebar-btn-xuat");
   const sideBtnChiet = $("sidebar-btn-chiet");
+  const sideBtnKiemKe = $("sidebar-btn-kiemke");
   const sideBadgeXuat = $("sidebar-badge-xuat");
   const sideBadgeChiet = $("sidebar-badge-chiet");
+  const sideBadgeKiemKe = $("sidebar-badge-kiemke");
+
+  const activeBtnClass = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
+  const inactiveBtnClass = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
 
   if (tabXuat) tabXuat.classList.toggle("hidden", !isXuat);
-  if (tabChiet) tabChiet.classList.toggle("hidden", isXuat);
+  if (tabChiet) tabChiet.classList.toggle("hidden", !isChiet);
+  if (tabKiemKe) tabKiemKe.classList.toggle("hidden", !isKiemKe);
+
+  if (sideBtnXuat) sideBtnXuat.className = isXuat ? activeBtnClass : inactiveBtnClass;
+  if (sideBtnChiet) sideBtnChiet.className = isChiet ? activeBtnClass : inactiveBtnClass;
+  if (sideBtnKiemKe) sideBtnKiemKe.className = isKiemKe ? activeBtnClass : inactiveBtnClass;
 
   if (isXuat) {
-    if (sideBtnXuat) sideBtnXuat.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
-    if (sideBtnChiet) sideBtnChiet.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
     if (headerTitle) headerTitle.innerHTML = `<span class="sm:hidden">Xuất Hàng</span><span class="hidden sm:inline">Phiếu xuất hàng hàng ngày</span>`;
     if (badgeChip) badgeChip.innerHTML = `<span class="sm:hidden font-bold">${state.phieu.length} dòng</span><span class="hidden sm:inline">Phiếu: ${state.phieu.length} dòng</span>`;
-  } else {
-    if (sideBtnChiet) sideBtnChiet.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left bg-white text-pine-900 shadow-md";
-    if (sideBtnXuat) sideBtnXuat.className = "sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white";
+  } else if (isChiet) {
     if (headerTitle) headerTitle.innerHTML = `<span class="sm:hidden">Chiết Hàng</span><span class="hidden sm:inline">Chiết hàng & Đóng gói sản phẩm</span>`;
     if (badgeChip) badgeChip.innerHTML = `<span class="sm:hidden font-bold">${state.repackage.targets.length} SP</span><span class="hidden sm:inline">Đích: ${state.repackage.targets.length} SP</span>`;
     renderRepackageTargets();
+  } else if (isKiemKe) {
+    if (headerTitle) headerTitle.innerHTML = `<span class="sm:hidden">Kiểm Kê Kho</span><span class="hidden sm:inline">Kiểm kê hàng hóa thực tế</span>`;
+    renderStockCheck();
+    updateStockCheckStats();
   }
 
   if (sideBadgeXuat) sideBadgeXuat.textContent = `${state.phieu.length} dòng`;
   if (sideBadgeChiet) sideBadgeChiet.textContent = `${state.repackage.targets.length} SP`;
+  updateStockCheckStats();
 }
 
 async function loadProducts() {
@@ -103,6 +120,8 @@ async function loadProducts() {
   if (res.success) {
     renderProductHead();
     renderProducts();
+    renderStockCheck();
+    updateStockCheckStats();
     setStatus(`${res.count} sản phẩm · ${res.file}`, "ok");
     if ($("product-count")) $("product-count").textContent = `Đã tải ${res.count} sản phẩm từ ${res.file}`;
     if ($("product-error")) $("product-error").classList.add("hidden");
@@ -189,6 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initHistoryView();
   initRepackageForm();
   initRepackageHistory();
+  initStockCheckView();
 
   // Dọn dẹp cache local cũ nếu có
   localStorage.removeItem("sam_pet_repackage_history");
@@ -212,6 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadProducts();
     loadSheetHistory();
     loadRepackageHistory();
+    loadStockCheckFromSheets();
   }
 
   function updatePinDots() {
@@ -584,6 +605,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("sidebar-btn-chiet")?.addEventListener("click", () => {
     switchTab("chiet");
+    closeSidebar();
+  });
+  $("sidebar-btn-kiemke")?.addEventListener("click", () => {
+    switchTab("kiemke");
     closeSidebar();
   });
   $("sidebar-btn-change-pin")?.addEventListener("click", () => {

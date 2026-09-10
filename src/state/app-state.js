@@ -28,9 +28,20 @@ export const state = {
     sourceQty: 1,
     targets: []
   },
+  stockCheck: {
+    counts: {},
+    deletedProductIds: [],
+    history: [],
+    filter: "all",
+    search: ""
+  },
   currentUser: null,
   staffList: []
 };
+
+export function resetStockCheckCounts() {
+  state.stockCheck.counts = {};
+}
 
 export function getCurrentUser() {
   return state.currentUser || null;

@@ -15,6 +15,7 @@ root.ENV = {
   SHEET_NAME_PHIEUXUAT: "PhieuXuat",
   SHEET_NAME_REPACKAGE: "repackage",
   SHEET_NAME_STAFF: "NhanVien",
+  SHEET_NAME_STOCKCHECK: "KiemKe",
 
   // Phiên bản ứng dụng
   APP_VERSION: "1.0.0",

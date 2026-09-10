@@ -258,3 +258,57 @@ export async function changeStaffPinAPI(staffId, oldPin, newPin) {
   });
   return await res.json();
 }
+
+/**
+ * Lưu kết quả kiểm kê thực tế lên Google Sheets (tab KiemKe)
+ */
+export async function saveStockCheckAPI(rows, auditDate, note = "", deletedProductIds = []) {
+  const staff = getCurrentUser()?.name || "";
+  const formattedRows = rows.map((r) => {
+    const cleanId = String(r.productId || "").replace(/^'+/, "").trim();
+    return {
+      productId: "'" + cleanId,
+      productName: r.productName || "",
+      unit: r.unit || "",
+      actualStock: Number(r.actualStock) || 0,
+      date: auditDate,
+      note: r.note || note || "",
+      staff
+    };
+  });
+
+  const res = await fetch(CONFIG.SHEETS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "stock_check_save",
+      date: auditDate,
+      note,
+      staff,
+      rows: formattedRows,
+      deletedProductIds: deletedProductIds || []
+    })
+  });
+  return await res.json();
+}
+
+export async function loadStockCheckHistoryAPI() {
+  const res = await fetch(CONFIG.SHEETS_URL + "?type=stock_check&_t=" + Date.now());
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.status === "error") throw new Error(data.message);
+
+  const rows = (data.rows || []).map((r) => {
+    r.date = normalizeDateVN(r.date);
+    if (r.id) r.id = String(r.id).replace(/^'+/, "");
+    if (r.productId) r.productId = String(r.productId).replace(/^'+/, "");
+    return r;
+  }).sort((a, b) => {
+    const dateComp = toYMD(b.date).localeCompare(toYMD(a.date));
+    if (dateComp !== 0) return dateComp;
+    return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+  });
+
+  return rows;
+}
+

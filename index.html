@@ -272,6 +272,18 @@
           <span id="sidebar-badge-chiet" class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-pine-200 font-mono">0 SP</span>
         </button>
 
+        <!-- Tab Kiểm Kê Kho -->
+        <button type="button" id="sidebar-btn-kiemke"
+          class="sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-white/80 hover:bg-white/10 hover:text-white">
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <span>Kiểm Kê Kho</span>
+          </div>
+          <span id="sidebar-badge-kiemke" class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-pine-200 font-mono">0/0</span>
+        </button>
+
         <!-- Nhóm Quản Trị & Cài Đặt -->
         <div class="my-2.5 border-t border-white/10"></div>
         <p class="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-pine-300/60">Tài Khoản & Quản Trị</p>
@@ -784,6 +796,110 @@
     </div>
 
     <!-- ======================================================== -->
+    <!-- TAB 3: KIỂM KÊ KHO (STOCK CHECK)                         -->
+    <!-- ======================================================== -->
+    <div id="tab-kiemke-container" class="space-y-6 hidden">
+      <section class="bg-white rounded-2xl shadow-card overflow-hidden">
+        <!-- Header -->
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold text-pine-800 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pine-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              Kiểm Kê Kho
+            </h2>
+            <p id="stock-check-summary" class="text-xs text-slate-500 mt-0.5">Đang tải danh mục sản phẩm…</p>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs">
+            <div class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center gap-1.5">
+              <span class="text-slate-500">Tổng SP:</span>
+              <strong id="stock-check-stat-total" class="font-bold text-slate-800 font-mono">0 SP</strong>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-1.5">
+              <span class="text-amber-700">Đã nhập tồn:</span>
+              <strong id="stock-check-stat-counted" class="font-bold text-amber-900 font-mono">0 SP</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thanh công cụ -->
+        <div class="px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <!-- Tìm kiếm -->
+          <div class="relative w-full sm:w-80">
+            <input id="stock-check-search" type="search" placeholder="🔍 Tìm theo Mã SP hoặc Tên SP…"
+              class="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-pine-500 font-medium text-ink" />
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
+            </svg>
+          </div>
+
+          <!-- Nút hành động -->
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <div class="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
+              <label for="stock-check-date" class="text-xs text-slate-500 font-medium whitespace-nowrap">Ngày:</label>
+              <input id="stock-check-date" type="date"
+                class="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none" />
+            </div>
+
+            <button id="btn-stock-check-reload" type="button"
+              class="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 shadow-xs active:scale-95 transition-all"
+              title="Tải lại số tồn thực tế từ Google Sheets">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Tải lại</span>
+            </button>
+
+
+            <button id="btn-stock-check-save-sheets" type="button"
+              class="rounded-xl bg-pine-600 hover:bg-pine-700 text-white px-4 py-2 text-xs sm:text-sm font-semibold shadow-card inline-flex items-center gap-2 active:scale-95 transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              <span>Lưu lên Google Sheets</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="stock-check-loading" class="hidden py-16 px-4 text-center bg-white">
+          <div class="inline-flex flex-col items-center justify-center gap-3">
+            <div class="w-10 h-10 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+            <p class="text-sm font-bold text-pine-900">Đang tải danh sách & số tồn từ Google Sheets…</p>
+            <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+          </div>
+        </div>
+
+        <div id="stock-check-content">
+          <!-- Bảng Desktop -->
+          <div class="overflow-x-auto scroll-thin max-h-[38rem] hidden sm:block">
+            <table class="min-w-full text-sm">
+              <thead class="sticky top-0 bg-pine-50 text-pine-800 text-left text-xs uppercase tracking-wide border-b border-pine-100">
+                <tr>
+                  <th class="px-3 py-3 w-12 text-center font-semibold">#</th>
+                  <th class="px-4 py-3 font-semibold w-40">Mã SP</th>
+                  <th class="px-4 py-3 font-semibold">Tên Sản Phẩm</th>
+                  <th class="px-3 py-3 font-semibold w-24 text-center">ĐVT</th>
+                  <th class="px-4 py-3 font-semibold w-52 text-center">Tồn thực tế</th>
+                </tr>
+              </thead>
+              <tbody id="stock-check-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+
+          <!-- Danh sách thẻ Mobile -->
+          <div id="stock-check-cards" class="sm:hidden p-3 space-y-2.5 max-h-[38rem] overflow-y-auto scroll-thin"></div>
+
+          <div id="stock-check-empty" class="hidden px-5 py-12 text-center text-sm text-slate-500">
+            Không tìm thấy sản phẩm nào phù hợp.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ======================================================== -->
     <!-- MODALS                                                   -->
     <!-- ======================================================== -->
 
@@ -936,6 +1052,8 @@
         </div>
       </div>
     </div>
+
+
 
     <!-- Modal sửa phiếu chiết hàng (1 Nguồn -> Nhiều Đích) -->
     <div id="repackage-edit-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
