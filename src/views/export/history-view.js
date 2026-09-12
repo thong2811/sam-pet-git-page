@@ -1,7 +1,7 @@
 // ============================================================
 // View Quản Lý Xuất Hàng (Google Sheets) & Thống Kê Theo Ngày
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
 import { escapeHtml, formatNgayXuat, formatLockDateVN, csvEscape, toYMD } from "../../utils/formatters.js";
 import { state, isDateLocked, getLockDate } from "../../state/app-state.js";
@@ -9,6 +9,7 @@ import { loadSheetHistoryAPI, deleteSheetHistoryRowsAPI } from "../../services/a
 import { openEditModal, setEditRowCallback } from "../common/edit-row-modal.js";
 import { setExportSuccessCallback } from "./export-modal.js";
 import { updateLockDateUI } from "../common/lock-date-modal.js";
+import { updateSectionSyncBadge, updateGlobalHeaderSync } from "../../utils/sync-indicator.js";
 
 const EXPORT_HEADER = [
   "id", "date", "productId", "productName",
@@ -16,8 +17,32 @@ const EXPORT_HEADER = [
   "note", "staff", "createdAt", "updatedAt"
 ];
 
-export async function loadSheetHistory() {
-  if ($("history-summary")) $("history-summary").textContent = "Đang tải dữ liệu…";
+const CACHE_KEY_HISTORY = "sam_pet_cache_history";
+
+export function getHistoryCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_HISTORY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.data)) return parsed;
+  } catch (e) {}
+  return null;
+}
+
+export function setHistoryCache(rows) {
+  try {
+    localStorage.setItem(CACHE_KEY_HISTORY, JSON.stringify({
+      data: rows,
+      timestamp: Date.now()
+    }));
+  } catch (e) {}
+}
+
+export function setHistorySyncStatus(status, detail = {}) {
+  updateSectionSyncBadge("history-sync-indicator", status, detail);
+}
+
+export async function loadSheetHistory(forceRefresh = false) {
   if ($("history-error")) $("history-error").classList.add("hidden");
   if ($("history-empty")) $("history-empty").classList.add("hidden");
 
@@ -28,44 +53,86 @@ export async function loadSheetHistory() {
     if (icon) icon.classList.add("animate-spin");
   }
 
-  const loadingTableHtml = `
-    <tr>
-      <td colspan="10" class="py-12 text-center bg-white">
+  let hasRenderedCache = false;
+
+  // 1. Kiểm tra cache hiển thị tức thì nếu không ép tải mới
+  if (!forceRefresh) {
+    const cached = getHistoryCache();
+    if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+      state.sheetHistory = cached.data;
+      updateLockDateUI();
+      renderHistory();
+      renderStats();
+      setHistorySyncStatus("cached-syncing");
+      hasRenderedCache = true;
+    }
+  }
+
+  // Nếu chưa có cache, hiển thị skeleton loading
+  if (!hasRenderedCache) {
+    setHistorySyncStatus("loading-fresh");
+    const loadingTableHtml = `
+      <tr>
+        <td colspan="10" class="py-12 text-center bg-white">
+          <div class="inline-flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+            <p class="text-sm font-medium text-pine-900">Đang tải lịch sử xuất hàng từ Google Sheets…</p>
+            <p class="text-xs text-slate-400">Đang kết nối và lấy dữ liệu mới nhất</p>
+          </div>
+        </td>
+      </tr>`;
+
+    const loadingCardsHtml = `
+      <div class="py-12 px-4 text-center bg-white">
         <div class="inline-flex flex-col items-center justify-center gap-3">
           <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
           <p class="text-sm font-medium text-pine-900">Đang tải lịch sử xuất hàng từ Google Sheets…</p>
-          <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+          <p class="text-xs text-slate-400">Đang kết nối và lấy dữ liệu mới nhất</p>
         </div>
-      </td>
-    </tr>`;
+      </div>`;
 
-  const loadingCardsHtml = `
-    <div class="py-12 px-4 text-center bg-white">
-      <div class="inline-flex flex-col items-center justify-center gap-3">
-        <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
-        <p class="text-sm font-medium text-pine-900">Đang tải lịch sử xuất hàng từ Google Sheets…</p>
-        <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
-      </div>
-    </div>`;
-
-  if ($("history-body")) $("history-body").innerHTML = loadingTableHtml;
-  if ($("history-cards")) $("history-cards").innerHTML = loadingCardsHtml;
+    if ($("history-body")) $("history-body").innerHTML = loadingTableHtml;
+    if ($("history-cards")) $("history-cards").innerHTML = loadingCardsHtml;
+  }
 
   try {
-    const rows = await loadSheetHistoryAPI();
+    const previousLength = state.sheetHistory.length;
+    const previousFirstId = state.sheetHistory[0]?.id || "";
+
+    const rows = await loadSheetHistoryAPI((retryInfo) => {
+      setHistorySyncStatus("retrying", retryInfo);
+    });
+
+    const isDataUpdated = hasRenderedCache && (rows.length !== previousLength || (rows[0]?.id || "") !== previousFirstId);
+
     state.sheetHistory = rows;
     state.historySelected.clear();
+    setHistoryCache(rows);
     updateLockDateUI();
     renderHistory();
     renderStats();
-  } catch (err) {
-    if ($("history-error")) {
-      $("history-error").textContent = "Không tải được dữ liệu: " + err.message;
-      $("history-error").classList.remove("hidden");
+
+    const nowTime = new Date().toLocaleTimeString("vi-VN");
+    setHistorySyncStatus("synced", { count: rows.length, time: nowTime });
+
+    if (isDataUpdated) {
+      toast("Đã đồng bộ dữ liệu mới nhất từ Google Sheets!", "info");
     }
-    if ($("history-summary")) $("history-summary").textContent = "Tải thất bại.";
-    if ($("history-body")) $("history-body").innerHTML = "";
-    if ($("history-cards")) $("history-cards").innerHTML = "";
+  } catch (err) {
+    if (hasRenderedCache) {
+      const cached = getHistoryCache();
+      const savedTime = cached ? new Date(cached.timestamp).toLocaleTimeString("vi-VN") : "";
+      setHistorySyncStatus("offline-fallback", { count: state.sheetHistory.length, time: savedTime });
+      toast("Không thể đồng bộ mới từ Google Sheets: " + err.message, "warning");
+    } else {
+      if ($("history-error")) {
+        $("history-error").textContent = "Không tải được dữ liệu: " + err.message;
+        $("history-error").classList.remove("hidden");
+      }
+      if ($("history-summary")) $("history-summary").textContent = "Tải thất bại.";
+      if ($("history-body")) $("history-body").innerHTML = "";
+      if ($("history-cards")) $("history-cards").innerHTML = "";
+    }
   } finally {
     if (btnReload) {
       btnReload.disabled = false;
@@ -107,7 +174,7 @@ export function renderHistory() {
   if ($("history-summary")) {
     $("history-summary").textContent = isFiltered
       ? `Hiển thị ${filtered.length} / ${total} dòng`
-      : `${total} dòng · cập nhật lúc ${new Date().toLocaleTimeString("vi-VN")}`;
+      : `${total} dòng trong sổ sách`;
   }
 
   const tbody = $("history-body");
@@ -205,10 +272,9 @@ export async function deleteSelectedRows() {
   if (!confirm(`Xóa ${ids.length} dòng đã chọn khỏi Google Sheets?`)) return;
 
   const btnDelete = $("btn-history-delete");
-  if (btnDelete) {
-    btnDelete.disabled = true;
-    btnDelete.textContent = "Đang xóa…";
-  }
+  setButtonLoading(btnDelete, true, `Đang xóa ${ids.length} dòng…`);
+  showLoadingOverlay("Đang xóa dữ liệu xuất hàng…", `Đang xóa ${ids.length} dòng sản phẩm trên Google Sheets`);
+  updateGlobalHeaderSync("syncing", "Đang xóa dòng…");
 
   try {
     const data = await deleteSheetHistoryRowsAPI(ids);
@@ -217,11 +283,18 @@ export async function deleteSelectedRows() {
       return;
     }
     toast(data.message || `Đã xóa ${ids.length} dòng.`, "success");
+    state.sheetHistory = state.sheetHistory.filter((r) => !ids.includes(r.id));
     state.historySelected.clear();
-    await loadSheetHistory();
+    setHistoryCache(state.sheetHistory);
+    renderHistory();
+    renderStats();
+    const nowTime = new Date().toLocaleTimeString("vi-VN");
+    setHistorySyncStatus("synced", { count: state.sheetHistory.length, time: nowTime });
   } catch (err) {
     toast("Lỗi khi xóa: " + err.message, "error");
   } finally {
+    hideLoadingOverlay();
+    setButtonLoading(btnDelete, false);
     updateHistorySelectionUI();
   }
 }
@@ -327,12 +400,48 @@ export function renderStats() {
   }
 }
 
+export function handleExportSuccess(exportedRows) {
+  if (!Array.isArray(exportedRows) || exportedRows.length === 0) return;
+
+  const staff = state.currentUser?.name || "";
+  const now = Date.now();
+  const formattedRows = exportedRows.map((r) => ({
+    id: String(r.id || "").replace(/^'+/, ""),
+    date: r.date,
+    productId: String(r.productId || "").replace(/^'+/, ""),
+    productName: r.productName || "",
+    quantity: String(r.quantity || "0"),
+    sellingPrice: String(r.sellingPrice || "0"),
+    purchasePrice: String(r.purchasePrice || "0"),
+    note: r.note || "",
+    staff: r.staff || staff,
+    createdAt: r.createdAt || now,
+    updatedAt: r.updatedAt || now
+  }));
+
+  state.sheetHistory = [...formattedRows, ...state.sheetHistory];
+  setHistoryCache(state.sheetHistory);
+  renderHistory();
+  renderStats();
+
+  const nowTime = new Date().toLocaleTimeString("vi-VN");
+  setHistorySyncStatus("synced", { count: state.sheetHistory.length, time: nowTime });
+}
+
+export function handleEditRowSuccess() {
+  setHistoryCache(state.sheetHistory);
+  renderHistory();
+  renderStats();
+  const nowTime = new Date().toLocaleTimeString("vi-VN");
+  setHistorySyncStatus("synced", { count: state.sheetHistory.length, time: nowTime });
+}
+
 export function initHistoryView() {
-  setEditRowCallback(loadSheetHistory);
-  setExportSuccessCallback(loadSheetHistory);
+  setEditRowCallback(handleEditRowSuccess);
+  setExportSuccessCallback(handleExportSuccess);
 
   const btnReload = $("btn-reload-history");
-  if (btnReload) btnReload.addEventListener("click", loadSheetHistory);
+  if (btnReload) btnReload.addEventListener("click", () => loadSheetHistory(true));
 
   const searchInput = $("history-search");
   if (searchInput) searchInput.addEventListener("input", renderHistory);

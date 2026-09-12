@@ -3,11 +3,12 @@
 // Tối giản: 1 danh sách sản phẩm, mỗi sản phẩm có 1 input tồn thực tế
 // Hỗ trợ nút xóa ✕ từng món và đồng bộ xóa lên Google Sheets
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { escapeHtml, todayInputValue, toYMD } from "../../utils/formatters.js";
+import { escapeHtml, todayInputValue, toYMD, formatNgayXuat } from "../../utils/formatters.js";
 import { state, isDateLocked } from "../../state/app-state.js";
 import { saveStockCheckAPI, loadStockCheckHistoryAPI } from "../../services/api.js";
+import { updateSectionSyncBadge } from "../../utils/sync-indicator.js";
 
 let isSaving = false;
 let isLoading = false;
@@ -313,17 +314,58 @@ async function saveToGoogleSheets() {
   isSaving = true;
   const btn = $("btn-stock-check-save-sheets");
   if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<span class="inline-block animate-spin mr-1">⟳</span> Đang lưu lên Sheets…`;
+    setButtonLoading(btn, true, "Đang lưu lên Sheets…");
   }
+  showLoadingOverlay("Đang lưu kết quả kiểm kê…", "Đang đồng bộ số tồn kho thực tế lên Google Sheets");
 
   try {
     const res = await saveStockCheckAPI(rowsToSave, auditDate, "", deletedPids);
     if (res && res.status === "ok") {
+      const staff = state.currentUser?.name || "";
+      const now = Date.now();
+
+      // 1. Lọc bỏ các món bị xóa khỏi history
+      let currentHistory = (state.stockCheck.history || []).filter((r) => {
+        const pid = String(r.productId || "").replace(/^'+/, "").trim();
+        const rDate = toYMD(r.date);
+        return !(toYMD(auditDate) === rDate && deletedPids.includes(pid));
+      });
+
+      // 2. Cập nhật hoặc thêm mới các món vừa lưu
+      rowsToSave.forEach((savedItem) => {
+        const pid = String(savedItem.productId || "").replace(/^'+/, "").trim();
+        const existingIdx = currentHistory.findIndex((r) => {
+          return String(r.productId || "").replace(/^'+/, "").trim() === pid && toYMD(r.date) === toYMD(auditDate);
+        });
+
+        const entry = {
+          date: formatNgayXuat(auditDate),
+          productId: pid,
+          productName: savedItem.productName || "",
+          unit: savedItem.unit || "",
+          actualStock: Number(savedItem.actualStock) || 0,
+          staff: staff,
+          note: "",
+          updatedAt: now
+        };
+
+        if (existingIdx >= 0) {
+          currentHistory[existingIdx] = { ...currentHistory[existingIdx], ...entry };
+        } else {
+          currentHistory.unshift(entry);
+        }
+      });
+
+      state.stockCheck.history = currentHistory;
+      setStockCheckCache(currentHistory);
       state.stockCheck.deletedProductIds = [];
-      toast(`Đã lưu thành công lên Google Sheets!`, "success");
-      // GIỮ NGUYÊN các số tồn đã nhập trong input để người dùng thấy rõ
+      state.stockCheck.counts = extractCountsFromHistory(currentHistory, auditDate);
       renderStockCheck();
+      updateStockCheckStats();
+
+      const nowTime = new Date().toLocaleTimeString("vi-VN");
+      setStockCheckSyncStatus("synced", { time: nowTime });
+      toast(`Đã lưu thành công lên Google Sheets!`, "success");
     } else {
       toast(res?.message || "Lỗi lưu dữ liệu lên Google Sheets.", "error");
     }
@@ -331,24 +373,87 @@ async function saveToGoogleSheets() {
     toast("Lỗi kết nối khi lưu kiểm kê: " + err.message, "error");
   } finally {
     isSaving = false;
+    hideLoadingOverlay();
     if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> <span>Lưu lên Google Sheets</span>`;
+      setButtonLoading(btn, false);
     }
   }
 }
 
+const CACHE_KEY_STOCKCHECK = "sam_pet_cache_stock_check";
+
+export function getStockCheckCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_STOCKCHECK);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.data)) return parsed;
+  } catch (e) {}
+  return null;
+}
+
+export function setStockCheckCache(historyRows) {
+  try {
+    localStorage.setItem(CACHE_KEY_STOCKCHECK, JSON.stringify({
+      data: historyRows,
+      timestamp: Date.now()
+    }));
+  } catch (e) {}
+}
+
 /**
- * Tải lại số tồn thực tế đã lưu từ Google Sheets về điền vào các ô input
+ * Trích xuất bảng số tồn thực tế (counts) từ danh sách lịch sử kiểm kê
+ * @param {Array} history - Danh sách các dòng kiểm kê (từ Cache hoặc Sheets)
+ * @param {string} targetDate - Ngày đang chọn kiểm kê (YYYY-MM-DD)
+ * @returns {Object} map { [productId]: actualStock }
  */
-export async function loadStockCheckFromSheets() {
+export function extractCountsFromHistory(history, targetDate) {
+  const counts = {};
+  if (!Array.isArray(history) || history.length === 0) return counts;
+
+  const normTargetDate = toYMD(targetDate || todayInputValue());
+
+  // 1. Lọc các bản ghi theo ngày đã chọn
+  const dateRows = history.filter((r) => toYMD(r.date) === normTargetDate);
+
+  // 2. Nếu ngày đã chọn có dữ liệu, ưu tiên lấy bản ghi của ngày đó
+  // Nếu ngày đã chọn CHƯA có dữ liệu, fallback lấy bản ghi kiểm kê gần nhất của từng sản phẩm
+  const rowsToProcess = dateRows.length > 0 ? dateRows : history;
+
+  // Sắp xếp các bản ghi theo thời gian giảm dần (mới nhất lên đầu)
+  const sorted = [...rowsToProcess].sort((a, b) => {
+    const dComp = toYMD(b.date).localeCompare(toYMD(a.date));
+    if (dComp !== 0) return dComp;
+    const uComp = (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+    if (uComp !== 0) return uComp;
+    return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+  });
+
+  // Duyệt từ mới nhất đến cũ nhất, gán lần đầu tiên gặp (tức là bản ghi mới nhất của sản phẩm đó)
+  sorted.forEach((r) => {
+    const pid = String(r.productId || "").replace(/^'+/, "").trim();
+    if (pid && counts[pid] === undefined) {
+      counts[pid] = Number(r.actualStock) || 0;
+    }
+  });
+
+  return counts;
+}
+
+export function setStockCheckSyncStatus(status, detail = {}) {
+  updateSectionSyncBadge("stock-check-sync-indicator", status, detail);
+}
+
+/**
+ * Tải lại số tồn thực tế đã lưu từ Google Sheets về điền vào các ô input (có SWR cache & retry)
+ */
+export async function loadStockCheckFromSheets(forceRefresh = false) {
   if (isLoading) return;
   isLoading = true;
 
   const btnReload = $("btn-stock-check-reload");
   const loadingEl = $("stock-check-loading");
   const contentEl = $("stock-check-content");
-  const summaryEl = $("stock-check-summary");
 
   const setSpinning = (spinning) => {
     if (!btnReload) return;
@@ -359,45 +464,65 @@ export async function loadStockCheckFromSheets() {
   };
 
   setSpinning(true);
-  if (loadingEl) loadingEl.classList.remove("hidden");
-  if (contentEl) contentEl.classList.add("hidden");
-  if (summaryEl) {
-    summaryEl.innerHTML = `<span class="inline-flex items-center gap-1.5 text-pine-700 font-semibold"><span class="h-2 w-2 rounded-full bg-pine-600 animate-ping inline-block"></span> Đang tải dữ liệu kiểm kê từ Google Sheets…</span>`;
-  }
 
   const dateInput = $("stock-check-date");
   const selectedDate = (dateInput && dateInput.value) ? toYMD(dateInput.value) : toYMD(todayInputValue());
 
-  try {
-    const rows = await loadStockCheckHistoryAPI();
-    state.stockCheck.history = rows || [];
+  let hasRenderedCache = false;
 
-    // Tìm các bản ghi cho ngày được chọn (hoặc bản ghi mới nhất của từng sản phẩm)
-    let matchedRows = (rows || []).filter((r) => toYMD(r.date) === selectedDate);
-    if (matchedRows.length === 0 && rows && rows.length > 0) {
-      matchedRows = rows;
+  // 1. Nếu không ép tải lại, đọc cache hiển thị ngay (0ms)
+  if (!forceRefresh) {
+    const cached = getStockCheckCache();
+    if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+      state.stockCheck.history = cached.data;
+      state.stockCheck.counts = extractCountsFromHistory(cached.data, selectedDate);
+
+      renderStockCheck();
+      updateStockCheckStats();
+      setStockCheckSyncStatus("cached-syncing");
+      hasRenderedCache = true;
     }
+  }
 
-    if (!state.stockCheck.counts) state.stockCheck.counts = {};
+  if (!hasRenderedCache) {
+    if (loadingEl) loadingEl.classList.remove("hidden");
+    if (contentEl) contentEl.classList.add("hidden");
+    setStockCheckSyncStatus("loading-fresh");
+  }
 
-    let loadedCount = 0;
-    matchedRows.forEach((r) => {
-      const pid = String(r.productId || "").replace(/^'+/, "").trim();
-      if (pid && state.stockCheck.counts[pid] === undefined) {
-        state.stockCheck.counts[pid] = Number(r.actualStock) || 0;
-        loadedCount++;
-      }
+  try {
+    const rows = await loadStockCheckHistoryAPI((retryInfo) => {
+      setStockCheckSyncStatus("retrying", retryInfo);
     });
 
-    renderStockCheck();
+    state.stockCheck.history = rows || [];
+    setStockCheckCache(rows || []);
 
-    if (loadedCount > 0) {
-      toast(`Đã tải lại ${loadedCount} số tồn thực tế từ Google Sheets!`, "success");
-    } else {
-      toast("Chưa có số tồn nào được lưu trên Google Sheets.", "info");
+    state.stockCheck.counts = extractCountsFromHistory(rows || [], selectedDate);
+    const loadedCount = Object.keys(state.stockCheck.counts).length;
+
+    renderStockCheck();
+    updateStockCheckStats();
+
+    const nowTime = new Date().toLocaleTimeString("vi-VN");
+    setStockCheckSyncStatus("synced", { time: nowTime });
+
+    if (forceRefresh) {
+      if (loadedCount > 0) {
+        toast(`Đã tải lại ${loadedCount} số tồn thực tế từ Google Sheets!`, "success");
+      } else {
+        toast("Chưa có số tồn nào được lưu trên Google Sheets.", "info");
+      }
     }
   } catch (err) {
-    toast("Không tải được dữ liệu từ Sheets: " + err.message, "error");
+    if (hasRenderedCache) {
+      const cached = getStockCheckCache();
+      const savedTime = cached ? new Date(cached.timestamp).toLocaleTimeString("vi-VN") : "";
+      setStockCheckSyncStatus("offline-fallback", { time: savedTime });
+      toast("Không thể đồng bộ mới dữ liệu kiểm kê: " + err.message, "warning");
+    } else {
+      toast("Không tải được dữ liệu từ Sheets: " + err.message, "error");
+    }
   } finally {
     isLoading = false;
     setSpinning(false);
@@ -416,11 +541,24 @@ export function initStockCheckView() {
     dateInput.value = todayInputValue();
   }
 
-  // Khi thay đổi ngày kiểm, tự động tải lại số tồn của ngày đó từ Sheets
+  // Khởi tạo ngay dữ liệu counts từ Cache (nếu có) để khi danh mục sản phẩm render là có sẵn số tồn (0ms)
+  const cached = getStockCheckCache();
+  if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+    state.stockCheck.history = cached.data;
+    const selectedDate = (dateInput && dateInput.value) ? toYMD(dateInput.value) : toYMD(todayInputValue());
+    state.stockCheck.counts = extractCountsFromHistory(cached.data, selectedDate);
+  }
+
+  // Khi thay đổi ngày kiểm, cập nhật ngay từ cache và tự động tải lại số tồn từ Sheets
   dateInput?.addEventListener("change", () => {
-    state.stockCheck.counts = {};
     state.stockCheck.deletedProductIds = [];
-    loadStockCheckFromSheets();
+    const newDate = (dateInput && dateInput.value) ? toYMD(dateInput.value) : toYMD(todayInputValue());
+    if (state.stockCheck.history && state.stockCheck.history.length > 0) {
+      state.stockCheck.counts = extractCountsFromHistory(state.stockCheck.history, newDate);
+      renderStockCheck();
+      updateStockCheckStats();
+    }
+    loadStockCheckFromSheets(false);
   });
 
   // Tìm kiếm sản phẩm
@@ -477,17 +615,12 @@ export function initStockCheckView() {
     });
   }
 
-
   // Nút Lưu lên Google Sheets
   $("btn-stock-check-save-sheets")?.addEventListener("click", saveToGoogleSheets);
 
-  // Nút Tải lại từ Google Sheets
+  // Nút Tải lại từ Google Sheets (ép tải mới)
   $("btn-stock-check-reload")?.addEventListener("click", () => {
-    state.stockCheck.counts = {};
     state.stockCheck.deletedProductIds = [];
-    loadStockCheckFromSheets();
+    loadStockCheckFromSheets(true);
   });
-
-  // Tải dữ liệu tồn đã lưu từ Google Sheets khi mở trang lần đầu
-  loadStockCheckFromSheets();
 }

@@ -26,6 +26,50 @@ var SHEET_NAME_STAFF = "NhanVien";
 var SHEET_NAME_STOCKCHECK = "KiemKe";
 var LOCK_TIMEOUT_MS = 10000; // chờ lock tối đa 10 giây
 
+var CACHE_KEY_PHIEUXUAT = "CACHE_PHIEUXUAT_V2";
+var CACHE_KEY_REPACKAGE = "CACHE_REPACKAGE_V2";
+var CACHE_KEY_STOCKCHECK = "CACHE_STOCKCHECK_V2";
+var CACHE_KEY_STAFF = "CACHE_STAFF_V2";
+var CACHE_TTL_SECONDS = 600; // Lưu cache 10 phút nếu không có thay đổi
+
+function getScriptCacheJson(key) {
+  try {
+    var cache = CacheService.getScriptCache();
+    return cache.get(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function putScriptCacheJson(key, jsonStr) {
+  try {
+    if (jsonStr && jsonStr.length < 95000) {
+      var cache = CacheService.getScriptCache();
+      cache.put(key, jsonStr, CACHE_TTL_SECONDS);
+    }
+  } catch (e) {}
+}
+
+function invalidateScriptCache(key) {
+  try {
+    var cache = CacheService.getScriptCache();
+    cache.remove(key);
+  } catch (e) {}
+}
+
+function invalidateAllCaches() {
+  try {
+    var cache = CacheService.getScriptCache();
+    cache.removeAll([CACHE_KEY_PHIEUXUAT, CACHE_KEY_REPACKAGE, CACHE_KEY_STOCKCHECK, CACHE_KEY_STAFF]);
+  } catch (e) {}
+}
+
+function rawJsonResponse(jsonStr) {
+  return ContentService
+    .createTextOutput(jsonStr)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 var HEADER_PHIEUXUAT = [
   "id", "date", "productId", "productName",
   "quantity", "sellingPrice", "purchasePrice",
@@ -60,12 +104,19 @@ function doGet(e) {
       return jsonResponse({ status: "ok", lockDate: lockDate });
     }
 
-    // 0. Trả về danh sách NHÂN VIÊN
+    // 0. Trả về danh sách NHÂN VIÊN (Kiểm tra cache trước)
     if (type === "staff") {
+      var cachedStaff = getScriptCacheJson(CACHE_KEY_STAFF);
+      if (cachedStaff) {
+        return rawJsonResponse(cachedStaff);
+      }
+
       var ssStaff = SpreadsheetApp.getActiveSpreadsheet();
       var sheetStaff = ssStaff.getSheetByName(SHEET_NAME_STAFF);
       if (!sheetStaff || sheetStaff.getLastRow() <= 1) {
-        return jsonResponse({ status: "ok", staffList: [] });
+        var emptyStaffResp = JSON.stringify({ status: "ok", staffList: [] });
+        putScriptCacheJson(CACHE_KEY_STAFF, emptyStaffResp);
+        return rawJsonResponse(emptyStaffResp);
       }
 
       var lastRowS = sheetStaff.getLastRow();
@@ -92,16 +143,25 @@ function doGet(e) {
         return st.id && (st.status !== "inactive" && st.status !== "deleted");
       });
 
-      return jsonResponse({ status: "ok", staffList: staffList });
+      var staffResp = JSON.stringify({ status: "ok", staffList: staffList });
+      putScriptCacheJson(CACHE_KEY_STAFF, staffResp);
+      return rawJsonResponse(staffResp);
     }
 
-    // 1. Trả về dữ liệu tab CHIẾT HÀNG
+    // 1. Trả về dữ liệu tab CHIẾT HÀNG (Kiểm tra cache trước)
     if (type === "repackage") {
+      var cachedRepack = getScriptCacheJson(CACHE_KEY_REPACKAGE);
+      if (cachedRepack) {
+        return rawJsonResponse(cachedRepack);
+      }
+
       var ssRepack = SpreadsheetApp.getActiveSpreadsheet();
       var sheetRepack = ssRepack.getSheetByName(SHEET_NAME_REPACKAGE) || ssRepack.getSheetByName("repackage_history");
 
       if (!sheetRepack || sheetRepack.getLastRow() <= 1) {
-        return jsonResponse({ status: "ok", lockDate: lockDate, repackageRows: [] });
+        var emptyRepackResp = JSON.stringify({ status: "ok", lockDate: lockDate, repackageRows: [] });
+        putScriptCacheJson(CACHE_KEY_REPACKAGE, emptyRepackResp);
+        return rawJsonResponse(emptyRepackResp);
       }
 
       var lastRowR = sheetRepack.getLastRow();
@@ -124,7 +184,6 @@ function doGet(e) {
           obj[key] = val;
         });
 
-        // Tương thích ngược nếu sheet cũ chưa có cột sessionFromQty
         if (obj.sessionFromQty === undefined || obj.sessionFromQty === "") {
           obj.sessionFromQty = Number(obj.fromQuantity) || 0;
         }
@@ -132,16 +191,25 @@ function doGet(e) {
         return obj;
       });
 
-      return jsonResponse({ status: "ok", lockDate: lockDate, repackageRows: repackageRows });
+      var repackResp = JSON.stringify({ status: "ok", lockDate: lockDate, repackageRows: repackageRows });
+      putScriptCacheJson(CACHE_KEY_REPACKAGE, repackResp);
+      return rawJsonResponse(repackResp);
     }
 
-    // 2. Trả về dữ liệu tab KIỂM KÊ (stock_check)
+    // 2. Trả về dữ liệu tab KIỂM KÊ (stock_check) (Kiểm tra cache trước)
     if (type === "stock_check") {
+      var cachedStock = getScriptCacheJson(CACHE_KEY_STOCKCHECK);
+      if (cachedStock) {
+        return rawJsonResponse(cachedStock);
+      }
+
       var ssCheck = SpreadsheetApp.getActiveSpreadsheet();
       var sheetCheck = ssCheck.getSheetByName(SHEET_NAME_STOCKCHECK);
 
       if (!sheetCheck || sheetCheck.getLastRow() <= 1) {
-        return jsonResponse({ status: "ok", lockDate: lockDate, rows: [] });
+        var emptyStockResp = JSON.stringify({ status: "ok", lockDate: lockDate, rows: [] });
+        putScriptCacheJson(CACHE_KEY_STOCKCHECK, emptyStockResp);
+        return rawJsonResponse(emptyStockResp);
       }
 
       var lastRowC = sheetCheck.getLastRow();
@@ -166,15 +234,24 @@ function doGet(e) {
         return obj;
       });
 
-      return jsonResponse({ status: "ok", lockDate: lockDate, rows: checkRows });
+      var stockResp = JSON.stringify({ status: "ok", lockDate: lockDate, rows: checkRows });
+      putScriptCacheJson(CACHE_KEY_STOCKCHECK, stockResp);
+      return rawJsonResponse(stockResp);
     }
 
-    // 3. Trả về dữ liệu tab XUẤT HÀNG (Mặc định)
+    // 3. Trả về dữ liệu tab XUẤT HÀNG (Mặc định) (Kiểm tra cache trước)
+    var cachedPhieu = getScriptCacheJson(CACHE_KEY_PHIEUXUAT);
+    if (cachedPhieu) {
+      return rawJsonResponse(cachedPhieu);
+    }
+
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(SHEET_NAME_PHIEUXUAT);
 
     if (!sheet || sheet.getLastRow() <= 1) {
-      return jsonResponse({ status: "ok", lockDate: lockDate, rows: [] });
+      var emptyPhieuResp = JSON.stringify({ status: "ok", lockDate: lockDate, rows: [] });
+      putScriptCacheJson(CACHE_KEY_PHIEUXUAT, emptyPhieuResp);
+      return rawJsonResponse(emptyPhieuResp);
     }
 
     var lastRow = sheet.getLastRow();
@@ -197,7 +274,9 @@ function doGet(e) {
       return obj;
     });
 
-    return jsonResponse({ status: "ok", lockDate: lockDate, rows: rows });
+    var phieuResp = JSON.stringify({ status: "ok", lockDate: lockDate, rows: rows });
+    putScriptCacheJson(CACHE_KEY_PHIEUXUAT, phieuResp);
+    return rawJsonResponse(phieuResp);
 
   } catch (err) {
     return jsonResponse({ status: "error", message: err.toString(), rows: [], repackageRows: [] });
@@ -230,6 +309,7 @@ function doPost(e) {
         var newLockDate = String(payload.lockDate || "").trim();
         var lockedBy = String(payload.staff || payload.lockedBy || "Root").trim();
         setGlobalLockDate(newLockDate, lockedBy);
+        invalidateAllCaches();
         return jsonResponse({ status: "ok", message: "Đã cập nhật ngày khóa sổ thành công.", lockDate: newLockDate, lockedBy: lockedBy });
       } finally {
         lock.releaseLock();
@@ -334,6 +414,7 @@ function actionAppend(payload) {
       sheet.getRange(insertAt, dateColIdx + 1, newRows.length, 1).setNumberFormat("@");
     }
 
+    invalidateScriptCache(CACHE_KEY_PHIEUXUAT);
     return jsonResponse({ status: "ok", message: "Đã ghi " + newRows.length + " dòng.", rowsWritten: newRows.length });
   } finally {
     lock.releaseLock();
@@ -398,6 +479,7 @@ function actionDelete(payload) {
       }
     }
 
+    invalidateScriptCache(CACHE_KEY_PHIEUXUAT);
     return jsonResponse({ status: "ok", message: "Đã xóa " + deleted + " dòng.", rowsDeleted: deleted });
   } finally {
     lock.releaseLock();
@@ -486,6 +568,7 @@ function actionUpdate(payload) {
       sheet.getRange(targetRow, dateColIdx + 1, 1, 1).setNumberFormat("@");
     }
 
+    invalidateScriptCache(CACHE_KEY_PHIEUXUAT);
     return jsonResponse({ status: "ok", message: "Đã cập nhật dòng id=" + row.id });
   } finally {
     lock.releaseLock();
@@ -576,6 +659,7 @@ function actionRepackage(payload) {
       sheet.getRange(insertAt, dateColIdx + 1, newRows.length, 1).setNumberFormat("@");
     }
 
+    invalidateScriptCache(CACHE_KEY_REPACKAGE);
     return jsonResponse({ status: "ok", message: "Đã ghi " + newRows.length + " dòng chiết hàng.", rowsWritten: newRows.length });
   } finally {
     lock.releaseLock();
@@ -640,6 +724,7 @@ function actionRepackageDelete(payload) {
       }
     }
 
+    invalidateScriptCache(CACHE_KEY_REPACKAGE);
     return jsonResponse({ status: "ok", message: "Đã xóa " + deleted + " dòng chiết hàng.", rowsDeleted: deleted });
   } finally {
     lock.releaseLock();
@@ -756,6 +841,7 @@ function actionRepackageUpdate(payload) {
       updatedCount++;
     });
 
+    invalidateScriptCache(CACHE_KEY_REPACKAGE);
     return jsonResponse({ status: "ok", message: "Đã cập nhật " + updatedCount + " dòng chiết hàng.", updatedCount: updatedCount });
   } finally {
     lock.releaseLock();
@@ -922,6 +1008,7 @@ function actionStaffSave(payload) {
       sheet.getRange(2, 3, rowsToWrite.length, 1).setNumberFormat("@");
     }
 
+    invalidateScriptCache(CACHE_KEY_STAFF);
     return jsonResponse({ status: "ok", message: "Đã cập nhật danh sách nhân viên thành công.", count: rowsToWrite.length });
   } finally {
     lock.releaseLock();
@@ -992,6 +1079,7 @@ function actionStaffChangePin(payload) {
       sheet.getRange(targetRowIdx, updateColIdx + 1).setValue(new Date().getTime());
     }
 
+    invalidateScriptCache(CACHE_KEY_STAFF);
     return jsonResponse({ status: "ok", message: "Đổi mã PIN thành công!" });
   } finally {
     lock.releaseLock();
@@ -1111,6 +1199,7 @@ function actionStockCheckSave(payload) {
 
     SpreadsheetApp.flush();
 
+    invalidateScriptCache(CACHE_KEY_STOCKCHECK);
     return jsonResponse({
       status: "ok",
       message: "Đã lưu " + rows.length + " sản phẩm thành công.",

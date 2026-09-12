@@ -1,12 +1,13 @@
 // ============================================================
 // Modal Xác Nhận Xuất Lên Google Sheets (Xuất Hàng)
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { formatNgayXuat, formatLockDateVN, unixNow, todayInputValue } from "../../utils/formatters.js";
+import { formatNgayXuat, formatLockDateVN, toYMD, unixNow, todayInputValue } from "../../utils/formatters.js";
 import { state, isDateLocked, getLockDate } from "../../state/app-state.js";
 import { appendPhieuXuatAPI } from "../../services/api.js";
 import { renderPhieu } from "./ticket-view.js";
+import { updateGlobalHeaderSync } from "../../utils/sync-indicator.js";
 import { getMinAllowedDate } from "../common/lock-date-modal.js";
 
 let onExportSuccessCallback = null;
@@ -79,10 +80,11 @@ export async function confirmExportToSheets() {
   }));
 
   const btnConfirm = $("btn-export-modal-confirm");
-  if (btnConfirm) {
-    btnConfirm.disabled = true;
-    btnConfirm.innerHTML = "Đang gửi…";
-  }
+  const btnCancel = $("btn-export-modal-cancel");
+  if (btnCancel) btnCancel.disabled = true;
+  setButtonLoading(btnConfirm, true, `Đang gửi ${rows.length} dòng lên Sheets…`);
+  showLoadingOverlay("Đang xuất phiếu hàng…", `Đang đồng bộ ${rows.length} dòng sản phẩm lên Google Sheets`);
+  updateGlobalHeaderSync("syncing", "Đang xuất hàng…");
 
   try {
     const data = await appendPhieuXuatAPI(rows);
@@ -94,14 +96,13 @@ export async function confirmExportToSheets() {
     state.phieu = [];
     renderPhieu();
     closeExportModal();
-    if (onExportSuccessCallback) onExportSuccessCallback();
+    if (onExportSuccessCallback) onExportSuccessCallback(rows);
   } catch (err) {
     toast("Lỗi khi gửi lên Sheets: " + err.message, "error");
   } finally {
-    if (btnConfirm) {
-      btnConfirm.disabled = false;
-      btnConfirm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Xác nhận xuất`;
-    }
+    hideLoadingOverlay();
+    if (btnCancel) btnCancel.disabled = false;
+    setButtonLoading(btnConfirm, false);
   }
 }
 

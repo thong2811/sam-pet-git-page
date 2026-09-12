@@ -1,11 +1,12 @@
 // ============================================================
 // Modal Xác Nhận Chiết Hàng (1 Nguồn -> N Đích)
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { formatNgayXuat, formatLockDateVN, unixNow, todayInputValue, escapeHtml } from "../../utils/formatters.js";
+import { formatNgayXuat, formatLockDateVN, unixNow, todayInputValue, escapeHtml, toYMD } from "../../utils/formatters.js";
 import { state, isDateLocked, getLockDate, genLineId, getField } from "../../state/app-state.js";
 import { saveRepackageAPI } from "../../services/api.js";
+import { updateGlobalHeaderSync } from "../../utils/sync-indicator.js";
 import { findProductByMa } from "../export/products-view.js";
 import { getMinAllowedDate } from "../common/lock-date-modal.js";
 
@@ -106,10 +107,11 @@ export async function confirmRepackageToSheets(resetFormFn) {
   });
 
   const btnConfirm = $("btn-repackage-modal-confirm");
-  if (btnConfirm) {
-    btnConfirm.disabled = true;
-    btnConfirm.innerHTML = "Đang xử lý…";
-  }
+  const btnCancel = $("btn-repackage-modal-cancel");
+  if (btnCancel) btnCancel.disabled = true;
+  setButtonLoading(btnConfirm, true, `Đang chiết ${newRows.length} mặt hàng…`);
+  showLoadingOverlay("Đang lưu phiếu chiết hàng…", `Đang đồng bộ ${newRows.length} mặt hàng chiết lên Google Sheets`);
+  updateGlobalHeaderSync("syncing", "Đang chiết hàng…");
 
   try {
     const data = await saveRepackageAPI(newRows);
@@ -121,14 +123,13 @@ export async function confirmRepackageToSheets(resetFormFn) {
     toast(data.message || (`Chiết hàng thành công! Đã ghi nhận phiếu chiết gồm ${newRows.length} mặt hàng đích.`), "success");
     closeRepackageModal();
     if (resetFormFn) resetFormFn();
-    if (onRepackageSuccessCallback) onRepackageSuccessCallback();
+    if (onRepackageSuccessCallback) onRepackageSuccessCallback(newRows);
   } catch (err) {
     toast("Lỗi khi đồng bộ chiết hàng: " + err.message, "error");
   } finally {
-    if (btnConfirm) {
-      btnConfirm.disabled = false;
-      btnConfirm.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Xác nhận chiết`;
-    }
+    hideLoadingOverlay();
+    if (btnCancel) btnCancel.disabled = false;
+    setButtonLoading(btnConfirm, false);
   }
 }
 

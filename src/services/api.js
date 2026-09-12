@@ -6,6 +6,47 @@ import { parseCSV, rowsToObjects, detectKeys, normalizeDateVN, toYMD } from "../
 import { state, getCurrentUser } from "../state/app-state.js";
 
 /**
+ * Hàm fetch an toàn hỗ trợ timeout bằng AbortController và tự động retry (Backoff)
+ * Dành riêng cho các request GET đọc dữ liệu để chống lỗi mạng tạm thời hoặc cold start.
+ */
+export async function fetchWithRetry(url, options = {}, { maxRetries = 2, timeoutMs = 12000, delayMs = 1000, onRetry = null } = {}) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+
+      // Nếu server trả về lỗi tạm thời 5xx hoặc 429 và còn lượt thử
+      if (!res.ok && (res.status >= 500 || res.status === 429) && attempt < maxRetries) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      const isTimeout = err.name === "AbortError";
+      lastError = isTimeout ? new Error(`Quá thời gian phản hồi (${timeoutMs / 1000}s)`) : err;
+
+      if (attempt < maxRetries) {
+        const waitTime = delayMs * (attempt + 1);
+        if (typeof onRetry === "function") {
+          try {
+            onRetry({ attempt: attempt + 1, maxRetries, waitTime, error: lastError });
+          } catch (e) {}
+        }
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Tải danh sách sản phẩm từ file CSV cục bộ
  */
 export async function loadProductsData() {
@@ -51,8 +92,8 @@ export async function loadProductsData() {
 /**
  * Lấy ngày khóa sổ từ Google Apps Script
  */
-export async function fetchLockDateAPI() {
-  const res = await fetch(CONFIG.SHEETS_URL + "?type=get_lock_date");
+export async function fetchLockDateAPI(onRetry = null) {
+  const res = await fetchWithRetry(CONFIG.SHEETS_URL + "?type=get_lock_date", { method: "GET" }, { timeoutMs: 10000, onRetry });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data && data.status === "ok" && data.lockDate !== undefined) {
@@ -68,12 +109,19 @@ export async function setLockDateAPI(isoDate) {
   const user = getCurrentUser();
   const staff = user?.name || "";
   const role = user?.role || "";
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "set_lock_date", lockDate: isoDate, staff, role })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "set_lock_date", lockDate: isoDate, staff, role }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -81,19 +129,26 @@ export async function setLockDateAPI(isoDate) {
  */
 export async function appendPhieuXuatAPI(rows) {
   const staff = getCurrentUser()?.name || "";
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "append", rows, staff })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "append", rows, staff }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
- * Lấy lịch sử xuất hàng từ Google Sheets
+ * Lấy lịch sử xuất hàng từ Google Sheets (có retry và timeout)
  */
-export async function loadSheetHistoryAPI() {
-  const res = await fetch(CONFIG.SHEETS_URL + "?type=json", { method: "GET" });
+export async function loadSheetHistoryAPI(onRetry = null) {
+  const res = await fetchWithRetry(CONFIG.SHEETS_URL + "?type=json&_t=" + Date.now(), { method: "GET" }, { timeoutMs: 12000, maxRetries: 2, delayMs: 1000, onRetry });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data.status === "error") throw new Error(data.message);
@@ -118,12 +173,19 @@ export async function loadSheetHistoryAPI() {
  * Xóa danh sách các dòng xuất hàng theo ID
  */
 export async function deleteSheetHistoryRowsAPI(ids) {
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "delete", ids })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "delete", ids }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -131,12 +193,19 @@ export async function deleteSheetHistoryRowsAPI(ids) {
  */
 export async function updateSheetHistoryRowAPI(rowPayload) {
   const staff = getCurrentUser()?.name || "";
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "update", row: rowPayload, staff })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "update", row: rowPayload, staff }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -144,24 +213,31 @@ export async function updateSheetHistoryRowAPI(rowPayload) {
  */
 export async function saveRepackageAPI(newRows) {
   const staff = getCurrentUser()?.name || "";
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      action: "repackage",
-      type: "repackage",
-      rows: newRows,
-      staff
-    })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "repackage",
+        type: "repackage",
+        rows: newRows,
+        staff
+      }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
- * Tải lịch sử chiết hàng
+ * Tải lịch sử chiết hàng (có retry và timeout)
  */
-export async function loadRepackageHistoryAPI() {
-  const res = await fetch(CONFIG.SHEETS_URL + "?type=repackage", { method: "GET" });
+export async function loadRepackageHistoryAPI(onRetry = null) {
+  const res = await fetchWithRetry(CONFIG.SHEETS_URL + "?type=repackage&_t=" + Date.now(), { method: "GET" }, { timeoutMs: 12000, maxRetries: 2, delayMs: 1000, onRetry });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data.status === "error") throw new Error(data.message);
@@ -187,12 +263,19 @@ export async function loadRepackageHistoryAPI() {
  * Xóa các dòng lịch sử chiết hàng
  */
 export async function deleteRepackageRowsAPI(idsToDelete) {
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "repackage_delete", ids: idsToDelete })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "repackage_delete", ids: idsToDelete }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -200,23 +283,30 @@ export async function deleteRepackageRowsAPI(idsToDelete) {
  */
 export async function updateRepackageSessionAPI(rowsPayload) {
   const staff = getCurrentUser()?.name || "";
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      action: "repackage_update",
-      rows: rowsPayload,
-      staff
-    })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "repackage_update",
+        rows: rowsPayload,
+        staff
+      }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
- * Tải danh sách nhân viên từ tab NhanVien trên Google Sheets
+ * Tải danh sách nhân viên từ tab NhanVien trên Google Sheets (có retry và timeout)
  */
-export async function fetchStaffListAPI() {
-  const res = await fetch(CONFIG.SHEETS_URL + "?type=staff&_t=" + Date.now());
+export async function fetchStaffListAPI(onRetry = null) {
+  const res = await fetchWithRetry(CONFIG.SHEETS_URL + "?type=staff&_t=" + Date.now(), { method: "GET" }, { timeoutMs: 10000, maxRetries: 2, delayMs: 1000, onRetry });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data && data.status === "ok") {
@@ -230,33 +320,47 @@ export async function fetchStaffListAPI() {
  */
 export async function saveStaffListAPI(staffList) {
   const staff = getCurrentUser()?.name || "";
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      action: "staff_save",
-      staffList: staffList,
-      staff
-    })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "staff_save",
+        staffList: staffList,
+        staff
+      }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
  * Nhân viên tự đổi mã PIN của chính mình
  */
 export async function changeStaffPinAPI(staffId, oldPin, newPin) {
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      action: "staff_change_pin",
-      staffId,
-      oldPin,
-      newPin
-    })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "staff_change_pin",
+        staffId,
+        oldPin,
+        newPin
+      }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -277,23 +381,33 @@ export async function saveStockCheckAPI(rows, auditDate, note = "", deletedProdu
     };
   });
 
-  const res = await fetch(CONFIG.SHEETS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      action: "stock_check_save",
-      date: auditDate,
-      note,
-      staff,
-      rows: formattedRows,
-      deletedProductIds: deletedProductIds || []
-    })
-  });
-  return await res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "stock_check_save",
+        date: auditDate,
+        note,
+        staff,
+        rows: formattedRows,
+        deletedProductIds: deletedProductIds || []
+      }),
+      signal: controller.signal
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-export async function loadStockCheckHistoryAPI() {
-  const res = await fetch(CONFIG.SHEETS_URL + "?type=stock_check&_t=" + Date.now());
+/**
+ * Tải lịch sử kiểm kê từ Google Sheets (có retry và timeout)
+ */
+export async function loadStockCheckHistoryAPI(onRetry = null) {
+  const res = await fetchWithRetry(CONFIG.SHEETS_URL + "?type=stock_check&_t=" + Date.now(), { method: "GET" }, { timeoutMs: 12000, maxRetries: 2, delayMs: 1000, onRetry });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data.status === "error") throw new Error(data.message);

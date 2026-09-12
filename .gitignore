@@ -16,3 +16,5 @@ export-stock.csv
 .clasprc.json
 node_modules/
 dist/
+docs/screenshots/
+tests/

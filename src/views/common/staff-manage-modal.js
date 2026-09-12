@@ -1,7 +1,7 @@
 // ============================================================
 // Modal Quản Lý Nhân Viên (Root) & Tự Đổi PIN Cá Nhân (Staff)
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { escapeHtml } from "../../utils/formatters.js";
 import { toast } from "../../utils/toast.js";
 import { getCurrentUser, isRootUser, getStaffList } from "../../state/app-state.js";
@@ -76,9 +76,9 @@ async function handleSelfChangePinSubmit() {
 
   const btnSave = $("btn-self-change-pin-save");
   if (btnSave) {
-    btnSave.disabled = true;
-    btnSave.textContent = "Đang đổi PIN…";
+    setButtonLoading(btnSave, true, "Đang đổi PIN…");
   }
+  showLoadingOverlay("Đang đổi mã PIN…", "Đang lưu mã PIN mới của bạn lên Google Sheets");
 
   try {
     const res = await selfChangePin(oldPin, newPin);
@@ -91,9 +91,9 @@ async function handleSelfChangePinSubmit() {
   } catch (err) {
     toast("Lỗi: " + err.message, "error");
   } finally {
+    hideLoadingOverlay();
     if (btnSave) {
-      btnSave.disabled = false;
-      btnSave.textContent = "Lưu Mã PIN Mới";
+      setButtonLoading(btnSave, false);
     }
   }
 }
@@ -238,17 +238,18 @@ export function renderStaffList() {
         return;
       }
 
+      setButtonLoading(btn, true, "Đang xóa…");
+      showLoadingOverlay("Đang xóa nhân viên…", `Đang xóa nhân viên "${name}" khỏi Google Sheets`);
       try {
-        btn.disabled = true;
-        btn.textContent = "Đang xóa…";
         await rootDeleteStaff(id);
         toast(`Đã xóa nhân viên "${name}" thành công!`, "success");
         if (editingStaffId === id) resetAddStaffForm();
         renderStaffList();
       } catch (err) {
         toast("Lỗi khi xóa nhân viên: " + err.message, "error");
-        btn.disabled = false;
-        btn.textContent = "Xóa";
+        setButtonLoading(btn, false);
+      } finally {
+        hideLoadingOverlay();
       }
     });
   });
@@ -279,9 +280,9 @@ async function handleStaffFormSubmit() {
 
   const btnSubmit = $("btn-submit-staff");
   if (btnSubmit) {
-    btnSubmit.disabled = true;
-    btnSubmit.textContent = "Đang lưu lên Sheets…";
+    setButtonLoading(btnSubmit, true, "Đang lưu lên Sheets…");
   }
+  showLoadingOverlay(id ? "Đang cập nhật nhân viên…" : "Đang thêm nhân viên…", "Đang đồng bộ danh sách nhân viên lên Google Sheets");
 
   try {
     if (id) {
@@ -298,9 +299,9 @@ async function handleStaffFormSubmit() {
   } catch (err) {
     toast("Lỗi: " + err.message, "error");
   } finally {
+    hideLoadingOverlay();
     if (btnSubmit) {
-      btnSubmit.disabled = false;
-      btnSubmit.textContent = id ? "Cập Nhật Thông Tin" : "+ Thêm Nhân Viên";
+      setButtonLoading(btnSubmit, false);
     }
   }
 }
@@ -330,9 +331,9 @@ export function initStaffModals() {
   $("btn-sync-staff-from-sheet")?.addEventListener("click", async () => {
     const btn = $("btn-sync-staff-from-sheet");
     if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = `<svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Đang đồng bộ…`;
+      setButtonLoading(btn, true, "Đang đồng bộ…");
     }
+    showLoadingOverlay("Đang đồng bộ nhân viên…", "Đang tải danh sách nhân viên từ Google Sheets");
     try {
       const list = await syncStaffList();
       renderStaffList();
@@ -340,9 +341,9 @@ export function initStaffModals() {
     } catch (err) {
       toast("Lỗi đồng bộ: " + err.message, "error");
     } finally {
+      hideLoadingOverlay();
       if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Đồng bộ lại`;
+        setButtonLoading(btn, false);
       }
     }
   });

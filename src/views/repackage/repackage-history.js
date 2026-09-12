@@ -1,16 +1,41 @@
 // ============================================================
 // View Quản Lý Lịch Sử Chiết Hàng (Gom nhóm theo Phiếu/Session)
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { escapeHtml, formatNgayXuat, formatLockDateVN, unixNow, toYMD } from "../../utils/formatters.js";
+import { escapeHtml, formatNgayXuat, formatLockDateVN, toYMD, unixNow } from "../../utils/formatters.js";
 import { state, isDateLocked, getLockDate } from "../../state/app-state.js";
 import { loadRepackageHistoryAPI, deleteRepackageRowsAPI, updateRepackageSessionAPI } from "../../services/api.js";
 import { getMinAllowedDate, updateLockDateUI } from "../common/lock-date-modal.js";
+import { updateSectionSyncBadge, updateGlobalHeaderSync } from "../../utils/sync-indicator.js";
 import { setRepackageSuccessCallback } from "./repackage-modal.js";
 
-export async function loadRepackageHistory() {
-  if ($("repackage-history-summary")) $("repackage-history-summary").textContent = "Đang tải dữ liệu chiết hàng…";
+const CACHE_KEY_REPACKAGE = "sam_pet_cache_repackage";
+
+export function getRepackageCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_REPACKAGE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.data)) return parsed;
+  } catch (e) {}
+  return null;
+}
+
+export function setRepackageCache(rows) {
+  try {
+    localStorage.setItem(CACHE_KEY_REPACKAGE, JSON.stringify({
+      data: rows,
+      timestamp: Date.now()
+    }));
+  } catch (e) {}
+}
+
+export function setRepackageSyncStatus(status, detail = {}) {
+  updateSectionSyncBadge("repackage-history-sync-indicator", status, detail);
+}
+
+export async function loadRepackageHistory(forceRefresh = false) {
   if ($("repackage-history-empty")) $("repackage-history-empty").classList.add("hidden");
 
   const btnReload = $("btn-repackage-reload-history");
@@ -20,39 +45,80 @@ export async function loadRepackageHistory() {
     if (icon) icon.classList.add("animate-spin");
   }
 
-  const loadingTableHtml = `
-    <tr>
-      <td colspan="7" class="py-12 text-center bg-white">
+  let hasRenderedCache = false;
+
+  // 1. Kiểm tra cache hiển thị tức thì nếu không ép tải mới
+  if (!forceRefresh) {
+    const cached = getRepackageCache();
+    if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+      state.repackageHistory = cached.data;
+      updateLockDateUI();
+      renderRepackageHistory();
+      setRepackageSyncStatus("cached-syncing");
+      hasRenderedCache = true;
+    }
+  }
+
+  // Nếu chưa có cache, hiển thị skeleton loading
+  if (!hasRenderedCache) {
+    setRepackageSyncStatus("loading-fresh");
+    const loadingTableHtml = `
+      <tr>
+        <td colspan="7" class="py-12 text-center bg-white">
+          <div class="inline-flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
+            <p class="text-sm font-medium text-pine-900">Đang tải lịch sử chiết hàng từ Google Sheets…</p>
+            <p class="text-xs text-slate-400">Đang kết nối và lấy dữ liệu mới nhất</p>
+          </div>
+        </td>
+      </tr>`;
+
+    const loadingCardsHtml = `
+      <div class="py-12 px-4 text-center bg-white">
         <div class="inline-flex flex-col items-center justify-center gap-3">
           <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
           <p class="text-sm font-medium text-pine-900">Đang tải lịch sử chiết hàng từ Google Sheets…</p>
-          <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
+          <p class="text-xs text-slate-400">Đang kết nối và lấy dữ liệu mới nhất</p>
         </div>
-      </td>
-    </tr>`;
+      </div>`;
 
-  const loadingCardsHtml = `
-    <div class="py-12 px-4 text-center bg-white">
-      <div class="inline-flex flex-col items-center justify-center gap-3">
-        <div class="w-8 h-8 border-4 border-pine-200 border-t-pine-600 rounded-full animate-spin"></div>
-        <p class="text-sm font-medium text-pine-900">Đang tải lịch sử chiết hàng từ Google Sheets…</p>
-        <p class="text-xs text-slate-400">Vui lòng đợi trong giây lát</p>
-      </div>
-    </div>`;
-
-  if ($("repackage-history-body")) $("repackage-history-body").innerHTML = loadingTableHtml;
-  if ($("repackage-history-cards")) $("repackage-history-cards").innerHTML = loadingCardsHtml;
+    if ($("repackage-history-body")) $("repackage-history-body").innerHTML = loadingTableHtml;
+    if ($("repackage-history-cards")) $("repackage-history-cards").innerHTML = loadingCardsHtml;
+  }
 
   try {
-    const rows = await loadRepackageHistoryAPI();
+    const previousLength = state.repackageHistory.length;
+    const previousFirstId = state.repackageHistory[0]?.id || "";
+
+    const rows = await loadRepackageHistoryAPI((retryInfo) => {
+      setRepackageSyncStatus("retrying", retryInfo);
+    });
+
+    const isDataUpdated = hasRenderedCache && (rows.length !== previousLength || (rows[0]?.id || "") !== previousFirstId);
+
     state.repackageHistory = rows;
+    setRepackageCache(rows);
     updateLockDateUI();
     renderRepackageHistory();
+
+    const nowTime = new Date().toLocaleTimeString("vi-VN");
+    setRepackageSyncStatus("synced", { count: rows.length, time: nowTime });
+
+    if (isDataUpdated) {
+      toast("Đã đồng bộ lịch sử chiết hàng mới nhất từ Google Sheets!", "info");
+    }
   } catch (err) {
     console.warn("Lỗi khi tải lịch sử chiết:", err);
-    if ($("repackage-history-summary")) $("repackage-history-summary").textContent = "Tải thất bại: " + err.message;
-    if ($("repackage-history-body")) $("repackage-history-body").innerHTML = "";
-    if ($("repackage-history-cards")) $("repackage-history-cards").innerHTML = "";
+    if (hasRenderedCache) {
+      const cached = getRepackageCache();
+      const savedTime = cached ? new Date(cached.timestamp).toLocaleTimeString("vi-VN") : "";
+      setRepackageSyncStatus("offline-fallback", { count: state.repackageHistory.length, time: savedTime });
+      toast("Không thể đồng bộ mới lịch sử chiết hàng: " + err.message, "warning");
+    } else {
+      if ($("repackage-history-summary")) $("repackage-history-summary").textContent = "Tải thất bại: " + err.message;
+      if ($("repackage-history-body")) $("repackage-history-body").innerHTML = "";
+      if ($("repackage-history-cards")) $("repackage-history-cards").innerHTML = "";
+    }
   } finally {
     if (btnReload) {
       btnReload.disabled = false;
@@ -133,7 +199,7 @@ export function renderRepackageHistory() {
   if ($("repackage-history-summary")) {
     $("repackage-history-summary").textContent = isFiltered
       ? `Hiển thị ${filtered.length} / ${allSessions.length} phiếu chiết`
-      : `${allSessions.length} phiếu chiết · cập nhật lúc ${new Date().toLocaleTimeString("vi-VN")}`;
+      : `${allSessions.length} phiếu chiết trong sổ sách`;
   }
 
   const tbody = $("repackage-history-body");
@@ -251,10 +317,9 @@ export async function deleteSelectedRepackageRows() {
   if (!confirm(`Xóa ${selectedSessionIds.length} phiếu chiết hàng đã chọn?`)) return;
 
   const btnDelete = $("btn-repackage-delete-selected");
-  if (btnDelete) {
-    btnDelete.disabled = true;
-    btnDelete.textContent = "Đang xóa…";
-  }
+  setButtonLoading(btnDelete, true, `Đang xóa ${selectedSessionIds.length} phiếu…`);
+  showLoadingOverlay("Đang xóa phiếu chiết hàng…", `Đang xóa ${selectedSessionIds.length} phiếu chiết trên Google Sheets`);
+  updateGlobalHeaderSync("syncing", "Đang xóa phiếu chiết…");
 
   try {
     const rowsToDelete = state.repackageHistory.filter((r) => {
@@ -272,12 +337,17 @@ export async function deleteSelectedRepackageRows() {
     }
 
     state.repackageHistory = state.repackageHistory.filter((r) => !idsToDelete.includes(r.id));
+    setRepackageCache(state.repackageHistory);
     toast(`Đã xóa ${selectedSessionIds.length} phiếu chiết hàng (${idsToDelete.length} dòng quy cách).`, "success");
     state.repackageSelected.clear();
     renderRepackageHistory();
+    const nowTime = new Date().toLocaleTimeString("vi-VN");
+    setRepackageSyncStatus("synced", { count: state.repackageHistory.length, time: nowTime });
   } catch (err) {
     toast("Lỗi khi xóa: " + err.message, "error");
   } finally {
+    hideLoadingOverlay();
+    setButtonLoading(btnDelete, false);
     updateRepackageSelectionUI();
   }
 }
@@ -402,8 +472,13 @@ export async function saveRepackageEditModal() {
   }
 
   const btnSave = $("btn-repackage-edit-save");
-  btnSave.disabled = true;
-  btnSave.textContent = "Đang lưu…";
+  const btnClose = $("btn-repackage-edit-close");
+  const btnCancel = $("btn-repackage-edit-cancel");
+  if (btnClose) btnClose.disabled = true;
+  if (btnCancel) btnCancel.disabled = true;
+  setButtonLoading(btnSave, true, "Đang lưu chiết hàng…");
+  showLoadingOverlay("Đang cập nhật phiếu chiết hàng…", "Đang đồng bộ thay đổi lên Google Sheets");
+  updateGlobalHeaderSync("syncing", "Đang sửa phiếu chiết…");
 
   try {
     const now = unixNow();
@@ -439,22 +514,58 @@ export async function saveRepackageEditModal() {
       }
     });
 
+    setRepackageCache(state.repackageHistory);
     toast(data.message || "Đã cập nhật phiếu chiết hàng.", "success");
     closeRepackageEditModal();
     renderRepackageHistory();
+    const nowTime = new Date().toLocaleTimeString("vi-VN");
+    setRepackageSyncStatus("synced", { count: state.repackageHistory.length, time: nowTime });
   } catch (err) {
     toast("Lỗi khi cập nhật: " + err.message, "error");
   } finally {
-    btnSave.disabled = false;
-    btnSave.textContent = "Lưu thay đổi";
+    hideLoadingOverlay();
+    if (btnClose) btnClose.disabled = false;
+    if (btnCancel) btnCancel.disabled = false;
+    setButtonLoading(btnSave, false);
   }
 }
 
+export function handleRepackageSuccess(newRows) {
+  if (!Array.isArray(newRows) || newRows.length === 0) return;
+
+  const staff = state.currentUser?.name || "";
+  const now = Date.now();
+  const formattedRows = newRows.map((r) => ({
+    id: String(r.id || "").replace(/^'+/, ""),
+    sessionId: r.sessionId || (r.date + "_" + r.fromProductId + "_" + (r.createdAt || now)),
+    date: r.date,
+    fromProductId: String(r.fromProductId || "").replace(/^'+/, ""),
+    fromProductName: r.fromProductName || "",
+    fromQuantity: String(r.fromQuantity || "0"),
+    sessionFromQty: String(r.sessionFromQty || r.fromQuantity || "0"),
+    toProductId: String(r.toProductId || "").replace(/^'+/, ""),
+    toProductName: r.toProductName || "",
+    toQuantity: String(r.toQuantity || "0"),
+    unit: r.unit || "",
+    note: r.note || "",
+    staff: r.staff || staff,
+    createdAt: r.createdAt || now,
+    updatedAt: r.updatedAt || now
+  }));
+
+  state.repackageHistory = [...formattedRows, ...state.repackageHistory];
+  setRepackageCache(state.repackageHistory);
+  renderRepackageHistory();
+
+  const nowTime = new Date().toLocaleTimeString("vi-VN");
+  setRepackageSyncStatus("synced", { count: state.repackageHistory.length, time: nowTime });
+}
+
 export function initRepackageHistory() {
-  setRepackageSuccessCallback(loadRepackageHistory);
+  setRepackageSuccessCallback(handleRepackageSuccess);
 
   const btnReload = $("btn-repackage-reload-history");
-  if (btnReload) btnReload.addEventListener("click", loadRepackageHistory);
+  if (btnReload) btnReload.addEventListener("click", () => loadRepackageHistory(true));
 
   const searchInput = $("repackage-history-search");
   if (searchInput) searchInput.addEventListener("input", renderRepackageHistory);

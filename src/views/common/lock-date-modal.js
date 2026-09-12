@@ -1,7 +1,7 @@
 // ============================================================
 // Modal & Logic Khóa Ngày Sổ Sách (Lock Date)
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
 import { formatLockDateVN, toYMD, formatNgayXuat, pad } from "../../utils/formatters.js";
 import { state, getLockDate, setLockDate, isRootUser } from "../../state/app-state.js";
@@ -180,8 +180,8 @@ export function initLockDateModal() {
         return;
       }
 
-      btnSave.disabled = true;
-      btnSave.textContent = "Đang lưu…";
+      setButtonLoading(btnSave, true, "Đang lưu…");
+      showLoadingOverlay("Đang thiết lập khóa ngày…", `Đang khóa sổ sách đến ngày ${formatLockDateVN(isoDate)} trên Google Sheets`);
 
       setLockDate(isoDate);
       updateLockDateUI();
@@ -196,8 +196,8 @@ export function initLockDateModal() {
       } catch (err) {
         toast(`Đã khóa cục bộ nhưng chưa đồng bộ được lên server: ${err.message}`, "warning");
       } finally {
-        btnSave.disabled = false;
-        btnSave.textContent = "Lưu ngày khóa";
+        hideLoadingOverlay();
+        setButtonLoading(btnSave, false);
         closeLockDateModal();
       }
     });
@@ -211,8 +211,8 @@ export function initLockDateModal() {
         return;
       }
 
-      btnClear.disabled = true;
-      btnClear.textContent = "Đang mở…";
+      setButtonLoading(btnClear, true, "Đang mở…");
+      showLoadingOverlay("Đang mở khóa ngày…", "Đang mở khóa ngày sổ sách trên Google Sheets");
 
       setLockDate("");
       updateLockDateUI();
@@ -227,8 +227,8 @@ export function initLockDateModal() {
       } catch (err) {
         toast(`Đã mở khóa cục bộ nhưng chưa đồng bộ được: ${err.message}`, "warning");
       } finally {
-        btnClear.disabled = false;
-        btnClear.textContent = "Mở khóa (Hủy)";
+        hideLoadingOverlay();
+        setButtonLoading(btnClear, false);
         closeLockDateModal();
       }
     });

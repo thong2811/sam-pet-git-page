@@ -1,11 +1,12 @@
 // ============================================================
 // Modal Cập nhật dòng xuất hàng đã có trên Sheets
 // ============================================================
-import { $ } from "../../utils/dom.js";
+import { $, setButtonLoading, showLoadingOverlay, hideLoadingOverlay } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { formatNgayXuat, formatLockDateVN, unixNow } from "../../utils/formatters.js";
-import { state, getLockDate, isDateLocked } from "../../state/app-state.js";
+import { formatNgayXuat, formatLockDateVN, toYMD, unixNow } from "../../utils/formatters.js";
+import { state, isDateLocked, getLockDate } from "../../state/app-state.js";
 import { updateSheetHistoryRowAPI } from "../../services/api.js";
+import { updateGlobalHeaderSync } from "../../utils/sync-indicator.js";
 import { getMinAllowedDate } from "./lock-date-modal.js";
 
 let onSaveCallback = null;
@@ -97,8 +98,13 @@ export async function saveEditModal() {
   }
 
   const btnSave = $("btn-edit-save");
-  btnSave.disabled = true;
-  btnSave.textContent = "Đang lưu…";
+  const btnClose = $("btn-edit-close");
+  const btnCancel = $("btn-edit-cancel");
+  if (btnClose) btnClose.disabled = true;
+  if (btnCancel) btnCancel.disabled = true;
+  setButtonLoading(btnSave, true, "Đang lưu thay đổi…");
+  showLoadingOverlay("Đang cập nhật dòng xuất hàng…", "Đang đồng bộ dữ liệu sửa đổi lên Google Sheets");
+  updateGlobalHeaderSync("syncing", "Đang sửa dòng…");
 
   try {
     const data = await updateSheetHistoryRowAPI({
@@ -131,8 +137,10 @@ export async function saveEditModal() {
   } catch (err) {
     toast("Lỗi khi lưu: " + err.message, "error");
   } finally {
-    btnSave.disabled = false;
-    btnSave.textContent = "Lưu thay đổi";
+    hideLoadingOverlay();
+    if (btnClose) btnClose.disabled = false;
+    if (btnCancel) btnCancel.disabled = false;
+    setButtonLoading(btnSave, false);
   }
 }
 

@@ -50,17 +50,31 @@ export function todayInputValue() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+export function toYMD(dateStr) {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  const clean = s.split("T")[0].trim();
+  const delimiter = clean.includes("/") ? "/" : clean.includes("-") ? "-" : null;
+  if (!delimiter) return clean;
+
+  const parts = clean.split(delimiter);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${pad(parts[1])}-${pad(parts[2])}`;
+    }
+    return `${parts[2]}-${pad(parts[1])}-${pad(parts[0])}`;
+  }
+  return clean;
+}
+
 export function normalizeDateVN(raw) {
   if (!raw) return "";
-  const s = String(raw).trim();
-  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
-  const parsed = new Date(s);
-  if (!isNaN(parsed.getTime())) {
-    const dd = String(parsed.getDate()).padStart(2, "0");
-    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
-    return `${dd}-${mm}-${parsed.getFullYear()}`;
+  const ymd = toYMD(raw);
+  const parts = ymd.split("-");
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${pad(parts[2])}-${pad(parts[1])}-${parts[0]}`;
   }
-  return s;
+  return String(raw).trim();
 }
 
 export function csvEscape(value) {
@@ -71,23 +85,12 @@ export function csvEscape(value) {
 
 export function formatNgayXuat(iso) {
   if (!iso) return "";
-  const parts = String(iso).split("-");
-  if (parts.length === 3) {
-    const [y, m, d] = parts;
-    return `${d}-${m}-${y}`;
+  const ymd = toYMD(iso);
+  const parts = ymd.split("-");
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${pad(parts[2])}-${pad(parts[1])}-${parts[0]}`;
   }
   return String(iso);
-}
-
-export function toYMD(dateStr) {
-  if (!dateStr) return "";
-  const s = String(dateStr).trim();
-  const parts = s.split("-");
-  if (parts.length === 3) {
-    if (parts[0].length === 4) return s; // YYYY-MM-DD
-    return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY -> YYYY-MM-DD
-  }
-  return s;
 }
 
 export function formatLockDateVN(iso) {

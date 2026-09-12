@@ -55,12 +55,30 @@ export function isRootUser() {
   return Boolean(state.currentUser && state.currentUser.role === "root");
 }
 
+const CACHE_KEY_STAFF = "sam_pet_staff_list_cache";
+
 export function getStaffList() {
+  if (state.staffList && state.staffList.length > 0) {
+    return state.staffList;
+  }
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_STAFF);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        state.staffList = parsed;
+        return parsed;
+      }
+    }
+  } catch (e) {}
   return state.staffList || [];
 }
 
 export function setStaffList(list) {
   state.staffList = Array.isArray(list) ? list : [];
+  try {
+    localStorage.setItem(CACHE_KEY_STAFF, JSON.stringify(state.staffList));
+  } catch (e) {}
 }
 
 export function genLineId() {

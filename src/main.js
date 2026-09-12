@@ -26,7 +26,12 @@ import { initRepackageForm, renderRepackageTargets } from "./views/repackage/rep
 import { initRepackageHistory, loadRepackageHistory } from "./views/repackage/repackage-history.js";
 
 // Stock check (Kiểm kê) views
-import { initStockCheckView, renderStockCheck, updateStockCheckStats, loadStockCheckFromSheets } from "./views/inventory/stock-check-view.js";
+import { initStockCheckView, renderStockCheck, updateStockCheckStats, loadStockCheckFromSheets, getStockCheckCache, extractCountsFromHistory } from "./views/inventory/stock-check-view.js";
+import { toYMD, todayInputValue } from "./utils/formatters.js";
+
+if (typeof window !== "undefined") {
+  window.__state = state;
+}
 
 export function hideSplash() {
   const splash = $("splash");
@@ -130,6 +135,16 @@ export function switchTab(tab, updateUrl = true) {
     renderRepackageTargets();
   } else if (isKiemKe) {
     if (headerTitle) headerTitle.innerHTML = `<span class="sm:hidden">Kiểm Kê Kho</span><span class="hidden sm:inline">Kiểm kê hàng hóa thực tế</span>`;
+    // Đảm bảo số tồn được nạp từ cache trước khi render nếu counts đang rỗng
+    if (Object.keys(state.stockCheck.counts || {}).length === 0) {
+      const cached = getStockCheckCache();
+      if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+        state.stockCheck.history = cached.data;
+        const dateInput = $("stock-check-date");
+        const selectedDate = (dateInput && dateInput.value) ? toYMD(dateInput.value) : toYMD(todayInputValue());
+        state.stockCheck.counts = extractCountsFromHistory(cached.data, selectedDate);
+      }
+    }
     renderStockCheck();
     updateStockCheckStats();
   }
@@ -137,6 +152,44 @@ export function switchTab(tab, updateUrl = true) {
   if (sideBadgeXuat) sideBadgeXuat.textContent = `${state.phieu.length} dòng`;
   if (sideBadgeChiet) sideBadgeChiet.textContent = `${state.repackage.targets.length} SP`;
   updateStockCheckStats();
+
+  // Kích hoạt tự động làm mới dữ liệu ngầm từ Google Sheets khi chuyển tab
+  triggerTabLoad(targetTab);
+}
+
+const tabLastFetchedAt = { xuat: 0, chiet: 0, kiemke: 0 };
+const tabFetching = { xuat: false, chiet: false, kiemke: false };
+const TAB_REVALIDATE_THROTTLE_MS = 5000; // 5s throttle chống spam request khi click tab liên tục
+let isDataInitialized = false;
+
+/**
+ * Tự động gọi ngầm Google Sheets để làm mới dữ liệu khi mở hoặc chuyển sang tab (SWR)
+ */
+export async function triggerTabLoad(tab, force = false) {
+  if (!isDataInitialized) return;
+  const targetTab = tab || state.activeTab || "xuat";
+  const now = Date.now();
+
+  // Chống gọi dồn dập nếu đang fetch hoặc vừa fetch trong vòng 5 giây (trừ khi ép tải mới)
+  if (!force && tabFetching[targetTab]) return;
+  if (!force && now - tabLastFetchedAt[targetTab] < TAB_REVALIDATE_THROTTLE_MS) return;
+
+  tabFetching[targetTab] = true;
+  tabLastFetchedAt[targetTab] = now;
+
+  try {
+    if (targetTab === "xuat") {
+      await loadSheetHistory(false);
+    } else if (targetTab === "chiet") {
+      await loadRepackageHistory(false);
+    } else if (targetTab === "kiemke") {
+      await loadStockCheckFromSheets(false);
+    }
+  } catch (err) {
+    console.warn(`Lỗi revalidate ngầm khi chuyển sang tab ${targetTab}:`, err);
+  } finally {
+    tabFetching[targetTab] = false;
+  }
 }
 
 async function loadProducts() {
@@ -144,6 +197,16 @@ async function loadProducts() {
   if (res.success) {
     renderProductHead();
     renderProducts();
+    // Đảm bảo counts từ cache đã sẵn sàng trước khi renderStockCheck
+    if (Object.keys(state.stockCheck.counts || {}).length === 0) {
+      const cached = getStockCheckCache();
+      if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+        state.stockCheck.history = cached.data;
+        const dateInput = $("stock-check-date");
+        const selectedDate = (dateInput && dateInput.value) ? toYMD(dateInput.value) : toYMD(todayInputValue());
+        state.stockCheck.counts = extractCountsFromHistory(cached.data, selectedDate);
+      }
+    }
     renderStockCheck();
     updateStockCheckStats();
     setStatus(`${res.count} sản phẩm · ${res.file}`, "ok");
@@ -257,17 +320,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================
   let currentPinInput = "";
   let selectedUserForAuth = null;
-  let isDataInitialized = false;
 
   function initAppData() {
     if (isDataInitialized) return;
     isDataInitialized = true;
     renderPhieu();
-    fetchLockDate();
     loadProducts();
-    loadSheetHistory();
-    loadRepackageHistory();
-    loadStockCheckFromSheets();
+    // Lazy Load: Chỉ kích hoạt tải dữ liệu cho tab đang hiển thị
+    triggerTabLoad(state.activeTab || "xuat");
   }
 
   function updatePinDots() {
@@ -408,36 +468,8 @@ document.addEventListener("DOMContentLoaded", () => {
     screen.classList.remove("hidden");
     backToUserPicker();
 
-    // Show loading skeleton while fetching staff list
-    const listEl = $("auth-users-list");
-    if (listEl) {
-      listEl.innerHTML = `
-        <div class="space-y-2 animate-pulse">
-          <div class="w-full p-3 rounded-2xl bg-amber-500/10 border border-amber-400/20 flex items-center gap-3">
-            <div class="h-11 w-11 rounded-xl bg-amber-400/30 shrink-0"></div>
-            <div class="flex-1 space-y-2">
-              <div class="h-3.5 bg-amber-300/20 rounded-full w-2/3"></div>
-              <div class="h-2.5 bg-amber-300/10 rounded-full w-1/2"></div>
-            </div>
-          </div>
-          <div class="w-full p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
-            <div class="h-11 w-11 rounded-xl bg-white/10 shrink-0"></div>
-            <div class="flex-1 space-y-2">
-              <div class="h-3.5 bg-white/10 rounded-full w-3/4"></div>
-              <div class="h-2.5 bg-white/5 rounded-full w-1/3"></div>
-            </div>
-          </div>
-          <div class="w-full p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
-            <div class="h-11 w-11 rounded-xl bg-white/10 shrink-0"></div>
-            <div class="flex-1 space-y-2">
-              <div class="h-3.5 bg-white/10 rounded-full w-1/2"></div>
-              <div class="h-2.5 bg-white/5 rounded-full w-2/5"></div>
-            </div>
-          </div>
-        </div>
-        <p class="text-center text-xs text-pine-300/60 pt-2">Đang tải danh sách nhân viên…</p>
-      `;
-    }
+    // Luôn hiển thị giao diện chọn tài khoản ngay lập tức (luôn có sẵn Root và nhân viên lưu trong cache)
+    renderAuthUserPicker();
 
     syncStaffList()
       .then(() => renderAuthUserPicker())

@@ -182,8 +182,14 @@
         </div>
       </div>
 
-      <!-- Bên Phải: Khóa Ngày + Badge Đếm -->
+      <!-- Bên Phải: Trạng Thái Đồng Bộ + Khóa Ngày + Badge Đếm -->
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Chip Trạng Thái Đồng Bộ Toàn Cục (Global Sync Pill) -->
+        <span id="header-sync-pill" class="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/15 px-2.5 py-1 text-[11px] font-medium border border-white/15 shadow-xs text-pine-100 transition-all cursor-default" title="Trạng thái kết nối Google Sheets">
+          <span id="header-sync-dot" class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          <span id="header-sync-text" class="hidden sm:inline">Đã đồng bộ</span>
+        </span>
+
         <!-- Chip Trạng Thái Khóa Ngày -->
         <button id="btn-open-lock-date-modal" type="button"
           class="inline-flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 px-2 py-1 sm:px-3 sm:py-1.5 transition-all border border-white/15 shadow-xs whitespace-nowrap text-[11px] sm:text-xs font-medium">
@@ -462,7 +468,13 @@
                 </svg>
                 Quản lý xuất hàng (Google Sheets)
               </h2>
-              <p id="history-summary" class="text-xs text-slate-500 mt-0.5">Đang tải dữ liệu…</p>
+              <div class="flex flex-wrap items-center gap-2 mt-1">
+                <span id="history-sync-indicator" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  <span id="history-sync-text">Sẵn sàng</span>
+                </span>
+                <p id="history-summary" class="text-xs text-slate-500">Đang tải dữ liệu…</p>
+              </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button id="btn-reload-history" type="button"
@@ -732,7 +744,13 @@
                 </svg>
                 Lịch sử chiết hàng (Repackage History)
               </h2>
-              <p id="repackage-history-summary" class="text-xs text-slate-500 mt-0.5">Đang tải lịch sử chiết…</p>
+              <div class="flex flex-wrap items-center gap-2 mt-1">
+                <span id="repackage-history-sync-indicator" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  <span id="repackage-history-sync-text">Sẵn sàng</span>
+                </span>
+                <p id="repackage-history-summary" class="text-xs text-slate-500">Đang tải lịch sử chiết…</p>
+              </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button id="btn-repackage-reload-history" type="button"
@@ -809,7 +827,13 @@
               </svg>
               Kiểm Kê Kho
             </h2>
-            <p id="stock-check-summary" class="text-xs text-slate-500 mt-0.5">Đang tải danh mục sản phẩm…</p>
+            <div class="flex flex-wrap items-center gap-2 mt-1">
+              <span id="stock-check-sync-indicator" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span id="stock-check-sync-text">Sẵn sàng</span>
+              </span>
+              <p id="stock-check-summary" class="text-xs text-slate-500">Đang tải danh mục sản phẩm…</p>
+            </div>
           </div>
 
           <div class="flex items-center gap-2 text-xs">
@@ -1291,6 +1315,30 @@
       </div>
     </div>
   </main>
+
+  <!-- ============================================================ -->
+  <!-- Global Loading Overlay (Chặn toàn bộ tương tác khi Thêm/Sửa/Xóa) -->
+  <!-- ============================================================ -->
+  <div id="global-loading-overlay" class="fixed inset-0 z-[99999] hidden flex-col items-center justify-center bg-slate-950/75 backdrop-blur-xs transition-all duration-200 select-none p-4">
+    <div class="bg-white/95 backdrop-blur-md text-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-white/50 flex flex-col items-center text-center animate-in fade-in zoom-in duration-200">
+      <div class="relative flex items-center justify-center mb-4">
+        <!-- Vòng xoay ngoài -->
+        <div class="w-14 h-14 rounded-full border-4 border-pine-100 border-t-pine-800 animate-spin"></div>
+        <!-- Icon giữa -->
+        <div class="absolute inset-0 flex items-center justify-center text-pine-800">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+        </div>
+      </div>
+      <h3 id="global-loading-title" class="text-base font-bold text-slate-800 mb-1">Đang xử lý dữ liệu…</h3>
+      <p id="global-loading-subtitle" class="text-xs text-slate-500 font-medium">Vui lòng chờ trong giây lát và không thao tác</p>
+      <div class="mt-4 flex items-center gap-1.5 px-3 py-1 rounded-full bg-pine-50 border border-pine-100 text-[11px] text-pine-800 font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+        <span>Đang đồng bộ Google Sheets</span>
+      </div>
+    </div>
+  </div>
 
   <div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[min(22rem,calc(100%-2rem))]"></div>
 
